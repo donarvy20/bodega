@@ -47,7 +47,7 @@
     <div class="max-w-4xl mx-auto bg-white p-6 sm:p-10 rounded-xl shadow-2xl">
         <header class="mb-8">
             <h1 class="text-4xl font-extrabold text-blue-800 mb-2">Gestión de Inventario de Bodega</h1>
-            <p class="text-gray-600">Administración de productos con búsqueda por texto, voz y lectura automática de resultados.</p>
+            <p class="text-gray-600">Administración de productos con búsqueda por texto, voz y lectura automática de precios.</p>
             <div id="voice-status" class="mt-2 p-2 text-sm font-medium rounded-lg text-center bg-blue-100 text-blue-700 hidden">
                 Haga clic en el micrófono para iniciar la escucha continua.
             </div>
@@ -55,16 +55,32 @@
 
         <!-- Sección de Búsqueda y Menú -->
         <div class="mb-8 p-6 bg-blue-50 rounded-lg shadow-inner">
-            <div class="flex justify-between items-center mb-4">
-                <h2 class="text-2xl font-semibold text-blue-700">Herramientas de Búsqueda y Voz</h2>
-                <!-- BOTÓN HAMBURGUESA para Carga Masiva (simula menú) -->
-                <button onclick="openModal('bulk-upload-modal')" class="voice-btn flex items-center bg-indigo-500 text-white font-bold py-2 px-4 rounded-lg hover:bg-indigo-600 transition duration-150 ease-in-out shadow-lg">
-                    <!-- Icono de Hamburguesa/Upload -->
-                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-5 h-5 mr-1">
-                        <path stroke-linecap="round" stroke-linejoin="round" d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5" />
-                    </svg>
-                    Carga Masiva
-                </button>
+            <div class="flex justify-between items-center mb-4 flex-wrap gap-2">
+                <h2 class="text-2xl font-semibold text-blue-700">Herramientas</h2>
+                
+                <div class="flex flex-wrap gap-2">
+                    <!-- BOTÓN DE GUARDAR BACKUP -->
+                    <button onclick="saveBackup()" class="voice-btn flex items-center bg-yellow-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-yellow-700 transition duration-150 shadow-lg text-sm">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5 mr-1" viewBox="0 0 24 24" fill="currentColor">
+                            <path d="M13 3h-2v10H8l4 4 4-4h-3zM19 18h2v2H3v-2h2v-1c0-2.21 1.79-4 4-4h6c2.21 0 4 1.79 4 4v1z"/>
+                        </svg>
+                        Guardar Backup
+                    </button>
+                    <!-- BOTÓN DE CARGAR BACKUP -->
+                    <button onclick="openModal('restore-modal')" class="voice-btn flex items-center bg-yellow-400 text-gray-800 font-bold py-2 px-4 rounded-lg hover:bg-yellow-500 transition duration-150 shadow-lg text-sm">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5 mr-1" viewBox="0 0 24 24" fill="currentColor">
+                            <path d="M7 16V9c0-.55.45-1 1-1h6c.55 0 1 .45 1 1v7l3-3 1.41 1.41L12 21 5.59 14.41 7 13l3 3V9H8v7H7z"/>
+                        </svg>
+                        Cargar Backup
+                    </button>
+                    <!-- BOTÓN PARA CARGA MASIVA (CSV/PASTE) -->
+                    <button onclick="openModal('bulk-upload-modal')" class="voice-btn flex items-center bg-indigo-500 text-white font-bold py-2 px-4 rounded-lg hover:bg-indigo-600 transition duration-150 shadow-lg text-sm">
+                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-5 h-5 mr-1">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5" />
+                        </svg>
+                        Carga Masiva
+                    </button>
+                </div>
             </div>
             
             <div class="flex flex-col md:flex-row gap-4">
@@ -84,15 +100,14 @@
         <!-- Sección de Formulario CRUD -->
         <div class="mb-8 p-6 border border-gray-200 rounded-lg shadow-md">
             <h2 class="text-2xl font-semibold text-gray-700 mb-4" id="form-title">Añadir Nuevo Producto</h2>
-            <!-- Formulario simplificado a 3 columnas -->
+            <!-- Formulario simplificado a 2 columnas (Nombre y Precio) -->
             <form id="product-form" class="grid grid-cols-1 sm:grid-cols-3 gap-4">
                 <input type="hidden" id="product-id">
                 
                 <input type="text" id="product-name" placeholder="Nombre del Producto" required
-                       class="p-3 border border-gray-300 rounded-lg focus:ring-green-500 focus:border-green-500">
+                       class="sm:col-span-2 p-3 border border-gray-300 rounded-lg focus:ring-green-500 focus:border-green-500">
                 
-                <input type="number" id="product-quantity" placeholder="Stock" required min="1"
-                       class="p-3 border border-gray-300 rounded-lg focus:ring-green-500 focus:border-green-500">
+                <!-- Stock eliminado -->
                 
                 <input type="number" id="product-price" placeholder="Precio (S/.)" required min="0.01" step="0.01"
                        class="p-3 border border-gray-300 rounded-lg focus:ring-green-500 focus:border-green-500">
@@ -109,7 +124,7 @@
                 <thead class="bg-blue-600 text-white">
                     <tr>
                         <th class="px-3 py-3 text-left text-xs font-medium uppercase tracking-wider">Nombre</th>
-                        <th class="px-3 py-3 text-left text-xs font-medium uppercase tracking-wider">Stock</th>
+                        <!-- Stock eliminado de la cabecera -->
                         <th class="px-3 py-3 text-left text-xs font-medium uppercase tracking-wider">Precio (S/.)</th>
                         <th class="px-3 py-3 text-center text-xs font-medium uppercase tracking-wider">Acciones</th>
                     </tr>
@@ -124,22 +139,41 @@
         </div>
     </div>
 
-    <!-- Modal de Carga Masiva (Menú) -->
+    <!-- Modal de Carga Masiva (CSV/Copia-Pega) -->
     <div id="bulk-upload-modal" class="fixed inset-0 bg-black bg-opacity-50 z-50 hidden flex items-center justify-center p-4">
         <div class="bg-white p-6 rounded-xl shadow-2xl w-full max-w-lg">
             <div class="flex justify-between items-center mb-4">
-                <h3 class="text-2xl font-bold text-blue-800">Carga Masiva de Productos</h3>
+                <h3 class="text-2xl font-bold text-blue-800">Carga Masiva de Productos (CSV/Texto)</h3>
                 <button onclick="closeModal('bulk-upload-modal')" class="text-gray-500 hover:text-gray-800 text-3xl font-light leading-none">&times;</button>
             </div>
-            <p class="text-gray-600 mb-4 text-sm">Pegue los datos aquí. Cada producto debe estar en una línea separada y los datos deben estar separados por **espacios en blanco** (o tabulaciones). **Formato:** Nombre_con_guiones, Stock, Precio.</p>
+            <p class="text-gray-600 mb-4 text-sm">Pegue los datos aquí. Cada producto debe estar en una línea separada. **Formato:** Nombre, Precio (separados por comas o saltos de línea).</p>
             
-            <textarea id="bulk-data-input" rows="10" placeholder="Ejemplo:&#10;Leche_Gloria 50 4.50&#10;Pan_Bimbo 100 1.20"
+            <textarea id="bulk-data-input" rows="10" placeholder="Ejemplo:&#10;Leche Gloria, 4.50&#10;Pan Bimbo, 1.20&#10;Agua Cielo, 2.00"
                       class="w-full p-3 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500 shadow-sm mb-4"></textarea>
 
             <button onclick="uploadBulkProducts()" class="w-full bg-green-600 text-white font-bold py-3 rounded-lg hover:bg-green-700 transition duration-150 ease-in-out shadow-lg">
                 Cargar Productos Masivamente
             </button>
             <div id="bulk-status" class="mt-4 text-sm text-red-600 font-medium"></div>
+        </div>
+    </div>
+    
+    <!-- Modal de Restauración de Backup (Cargar Archivo JSON) -->
+    <div id="restore-modal" class="fixed inset-0 bg-black bg-opacity-50 z-50 hidden flex items-center justify-center p-4">
+        <div class="bg-white p-6 rounded-xl shadow-2xl w-full max-w-md">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="text-2xl font-bold text-yellow-800">Cargar Backup (.json)</h3>
+                <button onclick="closeModal('restore-modal')" class="text-gray-500 hover:text-gray-800 text-3xl font-light leading-none">&times;</button>
+            </div>
+            <p class="text-gray-600 mb-4 text-sm font-semibold text-red-700">ADVERTENCIA: Esto reemplazará todo el inventario actual.</p>
+            
+            <input type="file" id="backup-file-input" accept=".json"
+                   class="w-full p-3 border border-gray-300 rounded-lg focus:ring-yellow-500 focus:border-yellow-500 shadow-sm mb-4">
+
+            <button onclick="handleRestoreBackup()" class="w-full bg-yellow-600 text-white font-bold py-3 rounded-lg hover:bg-yellow-700 transition duration-150 ease-in-out shadow-lg">
+                Restaurar Inventario
+            </button>
+            <div id="restore-status" class="mt-4 text-sm text-red-600 font-medium"></div>
         </div>
     </div>
 
@@ -190,13 +224,6 @@
             "El inventario no contiene ese artículo. ¿Le puedo ayudar con otra cosa?",
             "Búsqueda fallida. Por favor, especifique mejor el producto.",
         ];
-
-        const commandTimeoutPhrases = [
-            "Límite de tiempo alcanzado. Esperando comando. Diga 'dame precios' para reactivar.",
-            "Tiempo de espera agotado. Vuelva a activar la búsqueda con el comando.",
-            "Comando expirado. Necesito que diga 'dame precios' para continuar la búsqueda.",
-        ];
-
 
         /**
          * Selecciona una frase aleatoria de un array.
@@ -337,6 +364,80 @@
             if(modalId === 'bulk-upload-modal') {
                 document.getElementById('bulk-status').textContent = ''; // Limpiar estado
                 document.getElementById('bulk-data-input').value = ''; // Limpiar textarea
+            }
+            if(modalId === 'restore-modal') {
+                document.getElementById('restore-status').textContent = '';
+                document.getElementById('backup-file-input').value = '';
+            }
+        }
+        
+        // --- Funciones de Backup/Restore ---
+
+        /**
+         * Crea un backup del inventario y lo descarga como archivo JSON.
+         */
+        window.saveBackup = function() {
+            const data = JSON.stringify({ products: products, nextId: nextId });
+            const filename = `inventario_bodega_backup_${new Date().toISOString().slice(0, 10)}.json`;
+            
+            const blob = new Blob([data], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = filename;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+            
+            displayTemporaryMessage('Backup del inventario guardado con éxito.', 'bg-green-100 text-green-700');
+        }
+
+        /**
+         * Lee el archivo JSON del backup y llama a restoreInventory.
+         */
+        window.handleRestoreBackup = function() {
+            const fileInput = document.getElementById('backup-file-input');
+            const restoreStatus = document.getElementById('restore-status');
+            const file = fileInput.files[0];
+            
+            restoreStatus.textContent = '';
+            
+            if (!file) {
+                restoreStatus.textContent = "Error: Seleccione un archivo .json para restaurar.";
+                return;
+            }
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const backupData = JSON.parse(e.target.result);
+                    restoreInventory(backupData);
+                    restoreStatus.classList.remove('text-red-600');
+                    restoreStatus.classList.add('text-green-600');
+                    restoreStatus.textContent = "¡Restauración exitosa! Inventario actualizado.";
+                    setTimeout(() => closeModal('restore-modal'), 1500);
+                } catch (error) {
+                    restoreStatus.classList.remove('text-green-600');
+                    restoreStatus.classList.add('text-red-600');
+                    restoreStatus.textContent = "Error al leer o analizar el archivo JSON. Asegúrese de que el formato sea correcto.";
+                    console.error("Error de restauración:", error);
+                }
+            };
+            reader.readAsText(file);
+        }
+
+        /**
+         * Reemplaza el inventario actual con los datos del backup.
+         */
+        function restoreInventory(backupData) {
+            if (backupData && Array.isArray(backupData.products)) {
+                products = backupData.products;
+                nextId = backupData.nextId || products.length > 0 ? products[products.length - 1].id + 1 : 1;
+                renderProducts();
+            } else {
+                throw new Error("Formato de backup JSON inválido.");
             }
         }
 
@@ -601,7 +702,7 @@
                 if (!product) return;
 
                 const priceString = product.price.toFixed(2).replace('.', ' con '); 
-                const textToSpeak = `Producto: ${product.name}. Stock: ${product.quantity}. Precio: ${priceString} soles.`;
+                const textToSpeak = `Producto: ${product.name}. Precio: ${priceString} soles.`; // Stock eliminado de la lectura
                 
                 const utterance = new SpeechSynthesisUtterance(textToSpeak);
                 utterance.lang = 'es-ES'; 
@@ -641,6 +742,7 @@
                 list.forEach((product, index) => {
                     const priceString = product.price.toFixed(2).replace('.', ' con ');
                     // Agregar una pequeña pausa (coma) entre productos.
+                    // Lectura simplificada: Nombre y Precio
                     textToSpeak += `${index + 1}. ${product.name}. Precio ${priceString} soles. `; 
                 });
                 
@@ -675,7 +777,7 @@
 
         // --- Funciones de Gestión de Productos (CRUD) ---
         
-        // ** NUEVA FUNCIÓN: CARGA MASIVA **
+        // ** NUEVA FUNCIÓN: CARGA MASIVA (CSV) **
         window.uploadBulkProducts = function() {
             const dataInput = document.getElementById('bulk-data-input').value.trim();
             const bulkStatus = document.getElementById('bulk-status');
@@ -693,33 +795,32 @@
             let successfulUploads = 0;
             let failedLines = [];
             
-            // Expresión regular para separar por uno o más espacios en blanco.
-            const delimiterRegex = /\s+/; 
+            // Expresión regular para separar por comas (CSV) o tabulaciones.
+            const delimiterRegex = /[\t,]/; 
 
             lines.forEach((line, index) => {
                 const lineNumber = index + 1;
                 const cleanLine = line.trim();
                 if (!cleanLine) return;
                 
-                // Usamos el espacio como separador principal
+                // Dividir la línea por coma o tabulador
                 const parts = cleanLine.split(delimiterRegex).map(p => p.trim()).filter(p => p.length > 0);
                 
-                // NOTA: Si el nombre del producto tiene espacios (ej. "Leche Gloria"), este método fallará.
-                // Se debe usar un guion bajo (ej. Leche_Gloria) para nombres con múltiples palabras.
-                
-                if (parts.length < 3) {
-                    failedLines.push(`Línea ${lineNumber}: Faltan datos (Nombre, Stock, Precio) o el formato es incorrecto.`);
+                // Formato esperado: Nombre, Precio (2 partes)
+                if (parts.length < 2) {
+                    failedLines.push(`Línea ${lineNumber}: Faltan datos (Nombre, Precio) o el formato es incorrecto.`);
                     return;
                 }
                 
-                // Si el nombre del producto tiene guiones, los reemplazamos por espacios para el display.
-                const name = parts[0].replace(/_/g, ' '); 
-                const quantity = parseInt(parts[1]);
-                const price = parseFloat(parts[2]);
+                // Si el nombre tiene varias palabras, se usa la parte 0.
+                const name = parts[0]; 
+                // Stock ha sido eliminado, lo insertamos como un valor temporal para no romper la lógica antigua de datos.
+                const quantity = 1; // Stock por defecto
+                const price = parseFloat(parts[1]);
 
                 // Validación de datos
-                if (!name || isNaN(quantity) || isNaN(price) || quantity <= 0 || price <= 0) {
-                    failedLines.push(`Línea ${lineNumber}: Datos de Stock/Precio inválidos. Stock:'${parts[1]}', Precio:'${parts[2]}'.`);
+                if (!name || isNaN(price) || price <= 0) { // Solo validamos Nombre y Precio
+                    failedLines.push(`Línea ${lineNumber}: Datos de Precio inválidos. Nombre:'${parts[0]}', Precio:'${parts[1]}'.`);
                     return;
                 }
 
@@ -727,7 +828,7 @@
                 products.push({
                     id: nextId++,
                     name: name,
-                    quantity: quantity,
+                    quantity: quantity, // Se mantiene por compatibilidad CRUD
                     price: price
                 });
                 successfulUploads++;
@@ -754,7 +855,7 @@
             } else {
                 bulkStatus.classList.remove('text-green-600');
                 bulkStatus.classList.add('text-red-600');
-                bulkStatus.textContent = "Error: No se pudo añadir ningún producto. Revise el formato (Nombre, Stock, Precio).";
+                bulkStatus.textContent = "Error: No se pudo añadir ningún producto. Revise el formato (Nombre, Precio).";
             }
         }
 
@@ -834,7 +935,6 @@
 
                 row.innerHTML = `
                     <td class="px-3 py-4 whitespace-nowrap text-sm font-medium text-gray-900">${product.name}</td>
-                    <td class="px-3 py-4 whitespace-nowrap text-sm text-gray-500">${product.quantity}</td>
                     <td class="px-3 py-4 whitespace-nowrap text-sm text-gray-500">S/. ${product.price.toFixed(2)}</td>
                     <td class="px-3 py-4 whitespace-nowrap text-right text-sm font-medium text-center space-x-2">
                         <button onclick="editProduct(${product.id})" class="text-blue-600 hover:text-blue-900 font-semibold px-2 py-1 rounded-md transition duration-150">
@@ -859,18 +959,19 @@
 
             const id = document.getElementById('product-id').value;
             const name = document.getElementById('product-name').value.trim();
-            const quantity = parseInt(document.getElementById('product-quantity').value);
+            // Stock eliminado de la lectura del formulario
             const price = parseFloat(document.getElementById('product-price').value);
 
             // Validación simplificada
-            if (!name || isNaN(quantity) || isNaN(price) || quantity <= 0 || price <= 0) {
+            if (!name || isNaN(price) || price <= 0) {
                 displayTemporaryMessage('Por favor, complete todos los campos correctamente.', 'bg-yellow-100 text-yellow-700');
                 return;
             }
 
             const newProductData = {
                 name,
-                quantity,
+                // Stock (quantity) se mantiene por compatibilidad interna, pero no se muestra
+                quantity: 1, 
                 price
             };
 
@@ -878,7 +979,9 @@
                 // Editar producto existente
                 const index = products.findIndex(p => p.id === parseInt(id));
                 if (index > -1) {
-                    products[index] = { id: parseInt(id), ...newProductData };
+                    // Mantener el quantity existente si se encuentra, sino usar 1 (para compatibilidad)
+                    const existingQuantity = products[index].quantity || 1;
+                    products[index] = { id: parseInt(id), quantity: existingQuantity, ...newProductData };
                     displayTemporaryMessage(`Producto "${name}" actualizado con éxito.`, 'bg-blue-100 text-blue-700');
                 }
                 resetForm();
@@ -901,7 +1004,7 @@
             if (product) {
                 document.getElementById('product-id').value = product.id;
                 document.getElementById('product-name').value = product.name;
-                document.getElementById('product-quantity').value = product.quantity;
+                // document.getElementById('product-quantity').value = product.quantity; // Stock eliminado
                 document.getElementById('product-price').value = product.price;
 
                 // Actualiza el texto del formulario
@@ -965,15 +1068,15 @@
         
         // Inicializar con datos de ejemplo
         function initializeApp() {
-            // Datos iniciales
-            products.push({ id: nextId++, name: 'Arroz Costeño', quantity: 20, price: 150.00 });
-            products.push({ id: nextId++, name: 'Aceite Primor', quantity: 55, price: 10.50 });
-            products.push({ id: nextId++, name: 'Azúcar Rubia', quantity: 120, price: 3.50 });
-            products.push({ id: nextId++, name: 'Fideos Don Vittorio', quantity: 80, price: 4.20 });
-            products.push({ id: nextId++, name: 'Gaseosa Inca Kola', quantity: 45, price: 8.00 });
-            products.push({ id: nextId++, name: 'Triángulo de Donofrio', quantity: 30, price: 2.50 }); 
-            products.push({ id: nextId++, name: 'Pasta Dental Kolinos', quantity: 70, price: 7.00 });
-            products.push({ id: nextId++, name: 'Serveza Pilsen', quantity: 150, price: 4.50 });
+            // Datos iniciales (Stock ahora es solo 1 por compatibilidad interna)
+            products.push({ id: nextId++, name: 'Arroz Costeño', quantity: 1, price: 150.00 });
+            products.push({ id: nextId++, name: 'Aceite Primor', quantity: 1, price: 10.50 });
+            products.push({ id: nextId++, name: 'Azúcar Rubia', quantity: 1, price: 3.50 });
+            products.push({ id: nextId++, name: 'Fideos Don Vittorio', quantity: 1, price: 4.20 });
+            products.push({ id: nextId++, name: 'Gaseosa Inca Kola', quantity: 1, price: 8.00 });
+            products.push({ id: nextId++, name: 'Triángulo de Donofrio', quantity: 1, price: 2.50 }); 
+            products.push({ id: nextId++, name: 'Pasta Dental Kolinos', quantity: 1, price: 7.00 });
+            products.push({ id: nextId++, name: 'Serveza Pilsen', quantity: 1, price: 4.50 });
 
             nextId = products.length + 1;
 
