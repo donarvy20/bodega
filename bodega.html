@@ -371,6 +371,46 @@
             }
         }
         
+        // --- Funciones de Persistencia (localStorage) ---
+        
+        /**
+         * Guarda el inventario actual y el ID consecutivo en el localStorage.
+         */
+        function saveProductsToLocalStorage() {
+            try {
+                const dataToSave = {
+                    products: products,
+                    nextId: nextId
+                };
+                localStorage.setItem('bodega_inventory', JSON.stringify(dataToSave));
+            } catch (error) {
+                console.error("Error al guardar en localStorage:", error);
+            }
+        }
+
+        /**
+         * Carga el inventario y el ID consecutivo desde el localStorage.
+         * @returns {boolean} True si se encontraron datos guardados.
+         */
+        function loadProductsFromLocalStorage() {
+            try {
+                const storedData = localStorage.getItem('bodega_inventory');
+                if (storedData) {
+                    const data = JSON.parse(storedData);
+                    if (Array.isArray(data.products)) {
+                        products = data.products;
+                        nextId = data.nextId || (products.length > 0 ? products[products.length - 1].id + 1 : 1);
+                        return true;
+                    }
+                }
+            } catch (error) {
+                console.error("Error al cargar desde localStorage:", error);
+                // Si el JSON está corrupto, lo borramos para evitar bucles de error.
+                localStorage.removeItem('bodega_inventory'); 
+            }
+            return false;
+        }
+
         // --- Funciones de Backup/Restore ---
 
         /**
@@ -435,6 +475,8 @@
             if (backupData && Array.isArray(backupData.products)) {
                 products = backupData.products;
                 nextId = backupData.nextId || products.length > 0 ? products[products.length - 1].id + 1 : 1;
+                
+                saveProductsToLocalStorage(); // Guardar el inventario restaurado
                 renderProducts();
             } else {
                 throw new Error("Formato de backup JSON inválido.");
@@ -835,6 +877,9 @@
             });
 
             if (successfulUploads > 0) {
+                // GUARDAR EN LOCAL STORAGE DESPUÉS DE LA CARGA MASIVA
+                saveProductsToLocalStorage(); 
+
                 // Mostrar resultados y actualizar la lista
                 bulkStatus.classList.remove('text-red-600');
                 bulkStatus.classList.add('text-green-600');
@@ -995,6 +1040,7 @@
                 form.reset();
             }
 
+            saveProductsToLocalStorage(); // Guardar cambios
             renderProducts(searchInput.value);
         });
 
@@ -1026,6 +1072,7 @@
 
                 if (window.confirm(confirmation)) {
                     products.splice(productIndex, 1);
+                    saveProductsToLocalStorage(); // Guardar cambios
                     renderProducts(searchInput.value);
                     displayTemporaryMessage(`Producto "${productName}" eliminado.`, 'bg-red-100 text-red-700');
                     if (document.getElementById('product-id').value === String(id)) {
@@ -1068,18 +1115,24 @@
         
         // Inicializar con datos de ejemplo
         function initializeApp() {
-            // Datos iniciales (Stock ahora es solo 1 por compatibilidad interna)
-            products.push({ id: nextId++, name: 'Arroz Costeño', quantity: 1, price: 150.00 });
-            products.push({ id: nextId++, name: 'Aceite Primor', quantity: 1, price: 10.50 });
-            products.push({ id: nextId++, name: 'Azúcar Rubia', quantity: 1, price: 3.50 });
-            products.push({ id: nextId++, name: 'Fideos Don Vittorio', quantity: 1, price: 4.20 });
-            products.push({ id: nextId++, name: 'Gaseosa Inca Kola', quantity: 1, price: 8.00 });
-            products.push({ id: nextId++, name: 'Triángulo de Donofrio', quantity: 1, price: 2.50 }); 
-            products.push({ id: nextId++, name: 'Pasta Dental Kolinos', quantity: 1, price: 7.00 });
-            products.push({ id: nextId++, name: 'Serveza Pilsen', quantity: 1, price: 4.50 });
+            // Intentar cargar datos guardados
+            const dataLoaded = loadProductsFromLocalStorage();
 
-            nextId = products.length + 1;
+            if (!dataLoaded) {
+                 // Si no hay datos guardados, cargar datos iniciales (Stock ahora es solo 1 por compatibilidad interna)
+                products.push({ id: nextId++, name: 'Arroz Costeño', quantity: 1, price: 150.00 });
+                products.push({ id: nextId++, name: 'Aceite Primor', quantity: 1, price: 10.50 });
+                products.push({ id: nextId++, name: 'Azúcar Rubia', quantity: 1, price: 3.50 });
+                products.push({ id: nextId++, name: 'Fideos Don Vittorio', quantity: 1, price: 4.20 });
+                products.push({ id: nextId++, name: 'Gaseosa Inca Kola', quantity: 1, price: 8.00 });
+                products.push({ id: nextId++, name: 'Triángulo de Donofrio', quantity: 1, price: 2.50 }); 
+                products.push({ id: nextId++, name: 'Pasta Dental Kolinos', quantity: 1, price: 7.00 });
+                products.push({ id: nextId++, name: 'Serveza Pilsen', quantity: 1, price: 4.50 });
 
+                nextId = products.length + 1;
+                saveProductsToLocalStorage(); // Guardar los datos iniciales
+            }
+            
             renderProducts();
             
             // ** INICIO AUTOMÁTICO **
