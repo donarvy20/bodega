@@ -1,0 +1,992 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gestión de Productos para Bodega (Voz)</title>
+    <!-- Carga de Tailwind CSS para un diseño moderno y responsive -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                    },
+                }
+            }
+        }
+    </script>
+    <style>
+        /* Estilos personalizados para el botón de voz */
+        .voice-btn {
+            transition: all 0.2s;
+        }
+        .voice-btn:hover {
+            transform: scale(1.05);
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+        }
+        .voice-btn.recording {
+            animation: pulse-recording 1.5s infinite;
+            background-color: #ef4444; /* Rojo 500 */
+        }
+        @keyframes pulse-recording {
+            0% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7); }
+            70% { box-shadow: 0 0 0 15px rgba(239, 68, 68, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); }
+        }
+        /* El modo de escucha continua ahora es el modo activo de búsqueda */
+        .listening-mode { 
+            background-color: #2563eb !important; /* Azul 600 */
+            color: white !important;
+        }
+    </style>
+</head>
+<body class="bg-gray-50 min-h-screen p-4 sm:p-8 font-sans">
+
+    <div class="max-w-4xl mx-auto bg-white p-6 sm:p-10 rounded-xl shadow-2xl">
+        <header class="mb-8">
+            <h1 class="text-4xl font-extrabold text-blue-800 mb-2">Gestión de Inventario de Bodega</h1>
+            <p class="text-gray-600">Administración de productos con búsqueda por texto, voz y lectura automática de resultados.</p>
+            <div id="voice-status" class="mt-2 p-2 text-sm font-medium rounded-lg text-center bg-blue-100 text-blue-700 hidden">
+                Haga clic en el micrófono para iniciar la escucha continua.
+            </div>
+        </header>
+
+        <!-- Sección de Búsqueda y Menú -->
+        <div class="mb-8 p-6 bg-blue-50 rounded-lg shadow-inner">
+            <div class="flex justify-between items-center mb-4">
+                <h2 class="text-2xl font-semibold text-blue-700">Herramientas de Búsqueda y Voz</h2>
+                <!-- BOTÓN HAMBURGUESA para Carga Masiva (simula menú) -->
+                <button onclick="openModal('bulk-upload-modal')" class="voice-btn flex items-center bg-indigo-500 text-white font-bold py-2 px-4 rounded-lg hover:bg-indigo-600 transition duration-150 ease-in-out shadow-lg">
+                    <!-- Icono de Hamburguesa/Upload -->
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-5 h-5 mr-1">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5" />
+                    </svg>
+                    Carga Masiva
+                </button>
+            </div>
+            
+            <div class="flex flex-col md:flex-row gap-4">
+                <input type="text" id="search-input" oninput="searchProducts()" placeholder="Escriba el nombre del producto o use el micrófono..."
+                       class="flex-grow p-3 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500 shadow-sm">
+
+                <button id="voice-search-btn" class="voice-btn w-full md:w-auto flex items-center justify-center bg-red-500 text-white font-bold py-3 px-6 rounded-lg hover:bg-red-600 transition duration-150 ease-in-out shadow-lg"
+                        onclick="toggleContinuousSearch()">
+                    <svg id="mic-icon" xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 mr-2" viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3zm5.5-3c0 3.53-2.61 6.44-6 6.93V21h-1v-4.07c-3.39-.49-6-3.4-6-6.93h-2c0 4.84 3.65 8.8 8.44 9.49V23h3v-2.51c4.79-.69 8.44-4.65 8.44-9.49h-2z"/>
+                    </svg>
+                    <span id="voice-btn-text">Iniciar Escucha Continua</span>
+                </button>
+            </div>
+        </div>
+
+        <!-- Sección de Formulario CRUD -->
+        <div class="mb-8 p-6 border border-gray-200 rounded-lg shadow-md">
+            <h2 class="text-2xl font-semibold text-gray-700 mb-4" id="form-title">Añadir Nuevo Producto</h2>
+            <!-- Formulario simplificado a 3 columnas -->
+            <form id="product-form" class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                <input type="hidden" id="product-id">
+                
+                <input type="text" id="product-name" placeholder="Nombre del Producto" required
+                       class="p-3 border border-gray-300 rounded-lg focus:ring-green-500 focus:border-green-500">
+                
+                <input type="number" id="product-quantity" placeholder="Stock" required min="1"
+                       class="p-3 border border-gray-300 rounded-lg focus:ring-green-500 focus:border-green-500">
+                
+                <input type="number" id="product-price" placeholder="Precio (S/.)" required min="0.01" step="0.01"
+                       class="p-3 border border-gray-300 rounded-lg focus:ring-green-500 focus:border-green-500">
+                
+                <button type="submit" id="submit-btn" class="sm:col-span-3 bg-green-500 text-white font-bold py-3 rounded-lg hover:bg-green-600 transition duration-150 ease-in-out shadow-md">
+                    <span id="submit-btn-text">Añadir Producto</span>
+                </button>
+            </form>
+        </div>
+
+        <!-- Sección de Lista de Productos -->
+        <div class="overflow-x-auto shadow-xl rounded-xl">
+            <table class="min-w-full bg-white divide-y divide-gray-200">
+                <thead class="bg-blue-600 text-white">
+                    <tr>
+                        <th class="px-3 py-3 text-left text-xs font-medium uppercase tracking-wider">Nombre</th>
+                        <th class="px-3 py-3 text-left text-xs font-medium uppercase tracking-wider">Stock</th>
+                        <th class="px-3 py-3 text-left text-xs font-medium uppercase tracking-wider">Precio (S/.)</th>
+                        <th class="px-3 py-3 text-center text-xs font-medium uppercase tracking-wider">Acciones</th>
+                    </tr>
+                </thead>
+                <tbody id="product-list" class="bg-white divide-y divide-gray-100">
+                    <!-- Los productos se insertarán aquí por JavaScript -->
+                </tbody>
+            </table>
+        </div>
+        <div id="no-products-message" class="text-center p-4 text-gray-500 mt-4 hidden">
+            No se encontraron productos.
+        </div>
+    </div>
+
+    <!-- Modal de Carga Masiva (Menú) -->
+    <div id="bulk-upload-modal" class="fixed inset-0 bg-black bg-opacity-50 z-50 hidden flex items-center justify-center p-4">
+        <div class="bg-white p-6 rounded-xl shadow-2xl w-full max-w-lg">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="text-2xl font-bold text-blue-800">Carga Masiva de Productos</h3>
+                <button onclick="closeModal('bulk-upload-modal')" class="text-gray-500 hover:text-gray-800 text-3xl font-light leading-none">&times;</button>
+            </div>
+            <p class="text-gray-600 mb-4 text-sm">Pegue los datos aquí. Cada producto debe estar en una línea separada y los datos deben estar separados por **espacios en blanco** (o tabulaciones). **Formato:** Nombre_con_guiones, Stock, Precio.</p>
+            
+            <textarea id="bulk-data-input" rows="10" placeholder="Ejemplo:&#10;Leche_Gloria 50 4.50&#10;Pan_Bimbo 100 1.20"
+                      class="w-full p-3 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500 shadow-sm mb-4"></textarea>
+
+            <button onclick="uploadBulkProducts()" class="w-full bg-green-600 text-white font-bold py-3 rounded-lg hover:bg-green-700 transition duration-150 ease-in-out shadow-lg">
+                Cargar Productos Masivamente
+            </button>
+            <div id="bulk-status" class="mt-4 text-sm text-red-600 font-medium"></div>
+        </div>
+    </div>
+
+    <script>
+        // --- Variables Globales ---
+        let products = [];
+        let nextId = 1;
+        const form = document.getElementById('product-form');
+        const listContainer = document.getElementById('product-list');
+        const searchInput = document.getElementById('search-input');
+        const voiceBtn = document.getElementById('voice-search-btn');
+        const voiceBtnText = document.getElementById('voice-btn-text');
+        const voiceStatus = document.getElementById('voice-status');
+        
+        // ** ESTADO DE VOZ **
+        let isContinuousListening = false; // Controla si el ciclo de escucha debe continuar.
+        let isStartingRecognition = false; // Bandera para evitar el InvalidStateError
+        let isAwaitingProductQuery = false; // Nuevo estado: True si ya se escuchó el comando y ahora se espera el producto.
+        let commandTimer = null;            // Temporizador para la espera del comando (60s)
+        
+        // --- Frases Aleatorias ---
+
+        const welcomePhrases = [
+            "Adelante, dígame de qué producto desea los precios.",
+            "Estoy lista. ¿Qué producto necesita buscar?",
+            "Con gusto. Nombre el artículo y le daré su precio.",
+            "Búsqueda activada. ¿Cuál es el producto?",
+            "Pregúnteme por el artículo que necesite. Escuchando.",
+            "Adelante. ¿De qué producto quiere saber el costo?",
+            "Dígame el nombre del producto, por favor.",
+            "Precio solicitado. Le escucho.",
+            "Perfecto. ¿Qué producto debo buscar ahora?",
+            "Cuenteme, ¿qué producto desea consultar?",
+            "Diga el nombre del producto que le interesa.",
+            "Esperando su consulta. Nombre el producto.",
+            "¿Cuál es el siguiente artículo que desea consultar?",
+            "Listo para buscar. Dígame el producto."
+        ];
+
+        const notFoundPhrases = [
+            "No encontré ese producto en el inventario. ¿Podría repetir o probar con otro nombre?",
+            "Lo siento, la búsqueda no arrojó resultados para ese artículo. ¿Revisamos la ortografía?",
+            "Parece que ese producto no está registrado. Intente con otra variación.",
+            "No lo tengo en el inventario. Tal vez no está ingresado aún.",
+            "Ese nombre no coincide con nada. ¿Desea buscar algo más?",
+            "Busqué, pero no encontré coincidencias. Intente de nuevo.",
+            "No hay resultados. ¿Quiere probar con una palabra clave diferente?",
+            "El inventario no contiene ese artículo. ¿Le puedo ayudar con otra cosa?",
+            "Búsqueda fallida. Por favor, especifique mejor el producto.",
+        ];
+
+        const commandTimeoutPhrases = [
+            "Límite de tiempo alcanzado. Esperando comando. Diga 'dame precios' para reactivar.",
+            "Tiempo de espera agotado. Vuelva a activar la búsqueda con el comando.",
+            "Comando expirado. Necesito que diga 'dame precios' para continuar la búsqueda.",
+        ];
+
+
+        /**
+         * Selecciona una frase aleatoria de un array.
+         */
+        function getRandomPhrase(phraseArray) {
+            const index = Math.floor(Math.random() * phraseArray.length);
+            return phraseArray[index];
+        }
+        
+        // --- Funciones de Control de Inactividad ---
+
+        /**
+         * Limpia los temporizadores de comando.
+         */
+        function clearInactivityTimers() {
+            if (commandTimer) {
+                clearTimeout(commandTimer);
+                commandTimer = null;
+            }
+        }
+
+        /**
+         * Inicia el temporizador de 60 segundos cuando la aplicación está esperando el comando.
+         */
+        function startCommandTimeout() {
+            if (commandTimer) clearTimeout(commandTimer);
+
+            // Iniciar el contador de 60 segundos
+            commandTimer = setTimeout(() => {
+                
+                console.log("[TIMER] El comando ha expirado (60s). Reiniciando el ciclo de escucha.");
+                
+                // La aplicación ya está en isAwaitingProductQuery = false. Simplemente la reiniciamos.
+                voiceStatus.textContent = "Tiempo de espera agotado. Diga el comando para reactivar la búsqueda.";
+                
+                // Reiniciar escucha continua.
+                if (isContinuousListening) {
+                    startNextRecognitionPhase(50); 
+                }
+            }, 60000); // 60 segundos
+        }
+
+
+        // --- Funciones de Utilidad ---
+
+        /**
+         * Normaliza el texto: lo convierte a minúsculas, elimina acentos y reemplaza 'ñ' por 'n'.
+         * @param {string} text El texto a normalizar.
+         * @returns {string} El texto normalizado.
+         */
+        function normalizeText(text) {
+            if (!text) return '';
+            // 1. Convertir a minúsculas
+            // 2. Normalizar y eliminar diacríticos (acentos)
+            // 3. Reemplazar 'ñ' por 'n'
+            return text.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/ñ/g, 'n');
+        }
+
+        /**
+         * Implementación simplificada de Umbral de Similitud (Fuzzy Like) para búsqueda.
+         * @param {string} normalizedProductName Nombre del producto (normalizado).
+         * @param {string} searchToken Token de búsqueda (normalizado).
+         * @returns {boolean} True si el token coincide de forma flexible.
+         */
+        function isFuzzyLikeMatch(normalizedProductName, searchToken) {
+            const tokenLength = searchToken.length;
+            
+            // 1. Coincidencia Fonética/Tipográfica (C/K, S/Z)
+            let pattern = searchToken
+                .replace(/c/g, '[csz]') 
+                .replace(/z/g, '[csz]') 
+                .replace(/s/g, '[csz]') 
+                .replace(/k/g, '[ck]');
+            
+            const regexExact = new RegExp(pattern, 'i'); 
+            if (regexExact.test(normalizedProductName)) {
+                return true;
+            }
+
+            // 2. Coincidencia parcial por Umbral de Similitud (Levenshtein simple)
+            if (tokenLength < 3) {
+                return false; 
+            }
+
+            for (let i = 0; i <= normalizedProductName.length - tokenLength; i++) {
+                const subString = normalizedProductName.substring(i, i + tokenLength);
+                let differences = 0;
+                
+                for (let j = 0; j < tokenLength; j++) {
+                    if (subString[j] !== searchToken[j]) {
+                        differences++;
+                    }
+                }
+                
+                const maxDifferences = tokenLength >= 5 ? 2 : 1;
+                
+                if (differences <= maxDifferences) {
+                    return true;
+                }
+            }
+            
+            return false;
+        }
+
+        function displayTemporaryMessage(message, classes) {
+            // Cancelar cualquier mensaje anterior antes de mostrar el nuevo
+            voiceStatus.className = 'hidden'; 
+            
+            voiceStatus.textContent = message;
+            voiceStatus.className = `mt-2 p-2 text-sm font-medium rounded-lg text-center ${classes}`;
+            voiceStatus.classList.remove('hidden');
+
+            // Quitar el mensaje temporal, pero no si la voz está activa o está hablando
+            setTimeout(() => {
+                if (!isListening() && !synth.speaking) {
+                    resetVoiceButton();
+                }
+            }, 3000); 
+        }
+
+        /**
+         * Verifica si el reconocimiento de voz está actualmente activo.
+         */
+        function isListening() {
+            return recognition && recognition.listening; 
+        }
+
+        // --- Funciones de Modal ---
+        window.openModal = function(modalId) {
+            document.getElementById(modalId).classList.remove('hidden');
+            if(modalId === 'bulk-upload-modal') {
+                document.getElementById('bulk-data-input').focus();
+            }
+        }
+
+        window.closeModal = function(modalId) {
+            document.getElementById(modalId).classList.add('hidden');
+            if(modalId === 'bulk-upload-modal') {
+                document.getElementById('bulk-status').textContent = ''; // Limpiar estado
+                document.getElementById('bulk-data-input').value = ''; // Limpiar textarea
+            }
+        }
+
+
+        // --- Funciones de Reconocimiento de Voz ---
+
+        const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+        let recognition = null;
+        
+        /** * Inicia la siguiente fase de reconocimiento con un retardo seguro y control de estado.
+         */
+        function startNextRecognitionPhase(delay = 750) { 
+            if (!recognition || !isContinuousListening || isStartingRecognition) return;
+
+            isStartingRecognition = true; // Bloquear nuevos intentos de start
+
+            setTimeout(() => {
+                if (isContinuousListening) {
+                    try {
+                        recognition.start();
+                    } catch (e) {
+                        isStartingRecognition = false; // Liberar la bandera de bloqueo
+                        
+                        // Simplificar el catch para evitar UNHANDLEDREJECTION
+                        if (e.name === 'InvalidStateError') {
+                            console.warn("InvalidStateError: El start() falló. Esperando el siguiente ciclo onend/TTS.");
+                        } else {
+                            console.error("Error al iniciar reconocimiento continuo:", e);
+                            isContinuousListening = false;
+                            resetVoiceButton();
+                        }
+                    }
+                } else {
+                    isStartingRecognition = false; // Liberar la bandera
+                }
+            }, delay); 
+        }
+
+        if (SpeechRecognition) {
+            recognition = new SpeechRecognition();
+            recognition.lang = 'es-ES'; 
+            recognition.interimResults = true; 
+            recognition.maxAlternatives = 1;
+            recognition.continuous = false; 
+            recognition.interimResults = false;
+
+            recognition.onstart = () => {
+                // Detener cualquier lectura de voz activa al iniciar la búsqueda
+                if (window.speechSynthesis.speaking) window.speechSynthesis.cancel();
+                
+                voiceBtn.classList.add('recording', 'listening-mode');
+                voiceBtn.classList.remove('active-mode'); 
+                isStartingRecognition = false; // La bandera se libera porque el start fue exitoso
+
+                voiceBtnText.textContent = isAwaitingProductQuery ? 'Escuchando Producto...' : 'Esperando Comando...';
+                
+                // *** MENSAJE DE ESTADO ACTUALIZADO ***
+                voiceStatus.textContent = isAwaitingProductQuery 
+                    ? 'Diga el nombre del producto que desea buscar.'
+                    : 'Modo Continuo activo. Diga el comando de activación.'; 
+                
+                voiceStatus.classList.add('bg-blue-100', 'text-blue-700');
+                voiceStatus.classList.remove('bg-red-100', 'text-red-700');
+                voiceStatus.classList.remove('hidden');
+
+                // *** INICIAR TEMPORIZADOR DE COMANDO SOLO SI ESTAMOS EN MODO ESPERA ***
+                if (!isAwaitingProductQuery) {
+                    startCommandTimeout();
+                } else {
+                    // Si ya estamos en modo BÚSQUEDA RÁPIDA, NO PONER TEMPORIZADOR DE COMANDO
+                    clearInactivityTimers();
+                }
+            };
+
+            recognition.onresult = (event) => {
+                let transcript = event.results[event.results.length - 1][0].transcript;
+                // Limpiamos la transcripción y normalizamos para la comparación
+                const cleanTranscript = transcript.replace(/[.,?!¡¿]/g, '').trim().toLowerCase(); 
+                
+                // 1. Detenemos la grabación tan pronto como tenemos un resultado final
+                recognition.stop(); 
+                
+                // Muestra en consola lo que se escuchó para debug
+                console.log(`[RECOGNISED] Transcripción limpia: ${cleanTranscript}`); 
+
+                // **********************************
+                // ESTADO 2: ESPERANDO NOMBRE DEL PRODUCTO (BÚSQUEDA RÁPIDA ACTIVA)
+                if (isAwaitingProductQuery) {
+                    clearInactivityTimers(); // Interrumpir cualquier temporizador de comando
+                    
+                    // LÓGICA REVERTIDA: Poner la transcripción completa en el input.
+                    searchInput.value = transcript.trim();
+                    
+                    // Usar la transcripción limpia para la búsqueda
+                    searchProducts(cleanTranscript); 
+                    
+                    // El reinicio a la escucha continua es manejado por el onend del TTS (speakResults)
+                    return;
+                }
+
+                // **********************************
+                // ESTADO 1: ESPERANDO COMANDO DE ACTIVACIÓN
+                
+                // ** LÓGICA DE ACTIVACIÓN FLEXIBLE **
+                // Se activa si contiene alguna de estas palabras clave de precio:
+                const isActivationCommand = cleanTranscript.includes("precio") || 
+                                            cleanTranscript.includes("costo") || 
+                                            cleanTranscript.includes("vale") || 
+                                            cleanTranscript.includes("cuanto") ||
+                                            cleanTranscript.includes("como esta");
+
+                if (isActivationCommand) {
+                    console.log("[SUCCESS] Comando de activación detectado. Iniciando búsqueda rápida."); // LOG DE ÉXITO
+                    // *** ACCIÓN CLAVE: Cancelar temporizadores si el usuario re-activa el comando ***
+                    clearInactivityTimers();
+
+                    isAwaitingProductQuery = true; // Activar estado de espera de producto (ILIMITADO)
+
+                    voiceStatus.classList.remove('hidden');
+                    voiceStatus.textContent = 'COMANDO ACTIVADO. Escuchando producto...';
+
+                    // TTS: Responder al usuario (frase aleatoria) y luego pasar al estado de búsqueda
+                    const responsePhrase = getRandomPhrase(welcomePhrases);
+                    speakPrompt(responsePhrase, () => {
+                         // Callback se ejecuta al terminar de hablar
+                         if (isContinuousListening) {
+                             // REINICIO DE ESTABILIDAD: REDUCIDO A 50MS
+                             startNextRecognitionPhase(50); 
+                         }
+                    });
+                    return; // El TTS callback manejará el reinicio de reconocimiento.
+                }
+
+                // Si la transcripción no es el comando, reiniciar para dar otra oportunidad
+                if (cleanTranscript.length > 0 && isContinuousListening) {
+                    console.log(`Frase no reconocida como comando. Reiniciando escucha para dar otra oportunidad.`);
+                    // REINICIO RÁPIDO: 50ms para que no se pierda la siguiente frase.
+                    startNextRecognitionPhase(50); 
+                }
+                
+                // Si no fue el comando, onend se encargará de reiniciar (si es no-speech) 
+            };
+
+            recognition.onerror = (event) => {
+                console.error('Error de reconocimiento de voz:', event.error);
+                let message = 'Error en el reconocimiento de voz. Intente de nuevo.';
+                
+                if (event.error === 'not-allowed') {
+                    message = 'Permiso de micrófono denegado. Haga clic en el botón para iniciar.';
+                    isContinuousListening = false; 
+                    resetVoiceButton();
+                } else if (event.error === 'no-speech') {
+                    // Si es no-speech, la sesión se cerró y onend se disparará para reiniciarlo.
+                    if (isContinuousListening) {
+                        console.log('No se detectó habla (no-speech). Reinicio controlado vía onend.');
+                    }
+                } else {
+                    displayTemporaryMessage(message, 'bg-red-100', 'text-red-700');
+                }
+            };
+            
+            // ** LÓGICA DE ESCUCHA CONTINUA - PUNTO CRÍTICO DE REINICIO **
+            recognition.onend = () => {
+                voiceBtn.classList.remove('recording');
+
+                // Si el modo continuo está activo y TTS no está hablando, reiniciamos.
+                // Si TTS está hablando, su onend (callback) lo reiniciará.
+                if (isContinuousListening && !synth.speaking) {
+                    // Este es el único punto de reinicio para evitar conflictos de estado (InvalidStateError/no-speech)
+                    startNextRecognitionPhase();
+                } else if (!isContinuousListening) {
+                    // Si fue desactivado manualmente, restablecer
+                    resetVoiceButton();
+                }
+            };
+        }
+
+        function resetVoiceButton() {
+            isContinuousListening = false;
+            isStartingRecognition = false; // Asegurar que la bandera esté limpia al resetear
+            isAwaitingProductQuery = false; // Resetear estado de búsqueda de producto
+            clearInactivityTimers(); // Asegurar que no quede ningún timer corriendo
+            voiceBtn.classList.remove('recording', 'listening-mode', 'active-mode');
+            voiceBtnText.textContent = 'Iniciar Escucha Continua';
+            voiceStatus.textContent = 'Haga clic en el micrófono para iniciar la escucha continua.';
+            voiceStatus.classList.add('bg-blue-100', 'text-blue-700');
+            voiceStatus.classList.remove('bg-red-100', 'text-red-700', 'bg-yellow-100', 'text-yellow-700', 'bg-purple-100', 'text-purple-700');
+        }
+
+        // Toggle para controlar el ciclo continuo
+        window.toggleContinuousSearch = function() {
+            if (!recognition) return;
+
+            if (isContinuousListening) {
+                // Detener el ciclo continuo y la grabación
+                isContinuousListening = false;
+                isStartingRecognition = false;
+                clearInactivityTimers(); // Limpiar temporizadores al apagar
+                try {
+                    recognition.stop();
+                } catch (e) {
+                    resetVoiceButton();
+                }
+            } else {
+                // Iniciar el ciclo continuo
+                isContinuousListening = true;
+                isAwaitingProductQuery = false; // Siempre inicia esperando el comando
+                startNextRecognitionPhase(50); // Iniciar con un pequeño retardo.
+            }
+        }
+
+        // --- Funciones de Texto a Voz (TTS) ---
+
+        const synth = window.speechSynthesis;
+        let spanishVoice = null;
+        let voicesLoaded = false;
+
+        function loadVoices() {
+            if (voicesLoaded) return;
+
+            const voices = synth.getVoices();
+            // Buscar una voz en español de España o Latinoamérica (cualquier es-*)
+            spanishVoice = voices.find(voice => voice.lang.startsWith('es-'));
+            voicesLoaded = true;
+
+            if (!spanishVoice) {
+                console.warn('No se encontró una voz en español. Se usará la voz predeterminada.');
+            }
+        }
+
+        if (synth) {
+            synth.onvoiceschanged = loadVoices;
+            loadVoices(); 
+            
+            const TTS_RATE = 1.5; // Velocidad de voz acelerada
+
+            /**
+             * Función auxiliar para que la aplicación hable (ej. responder a un comando).
+             */
+             function speakPrompt(text, callback = null) {
+                if (synth.speaking) {
+                    synth.cancel();
+                }
+
+                const utterance = new SpeechSynthesisUtterance(text);
+                utterance.lang = 'es-ES'; 
+                utterance.rate = TTS_RATE;
+                
+                if (spanishVoice) {
+                    utterance.voice = spanishVoice;
+                }
+                
+                if (callback) {
+                    utterance.onend = callback;
+                }
+
+                synth.speak(utterance);
+            }
+            
+            window.speakProduct = function(id) {
+                const product = products.find(p => p.id === id);
+                if (!product) return;
+
+                const priceString = product.price.toFixed(2).replace('.', ' con '); 
+                const textToSpeak = `Producto: ${product.name}. Stock: ${product.quantity}. Precio: ${priceString} soles.`;
+                
+                const utterance = new SpeechSynthesisUtterance(textToSpeak);
+                utterance.lang = 'es-ES'; 
+                utterance.rate = TTS_RATE;
+                
+                if (spanishVoice) {
+                    utterance.voice = spanishVoice;
+                }
+
+                synth.speak(utterance);
+                displayTemporaryMessage(`Leyendo: ${product.name}`, 'bg-purple-100 text-purple-700');
+            }
+            
+            /**
+             * Lee en voz alta todos los productos filtrados y los resultados de la búsqueda.
+             */
+            function speakResults(list) {
+                if (!synth) return;
+
+                // Cancelar cualquier lectura anterior
+                if (synth.speaking) {
+                    synth.cancel();
+                }
+                
+                let textToSpeak = '';
+                const count = list.length;
+
+                if (count === 1) {
+                    textToSpeak = `Se encontró un producto. `;
+                } else if (count > 1) {
+                    textToSpeak = `Se encontraron ${count} productos. `;
+                } else {
+                    // Si no hay resultados, seleccionar una frase de error aleatoria
+                    textToSpeak = getRandomPhrase(notFoundPhrases);
+                }
+
+                list.forEach((product, index) => {
+                    const priceString = product.price.toFixed(2).replace('.', ' con ');
+                    // Agregar una pequeña pausa (coma) entre productos.
+                    textToSpeak += `${index + 1}. ${product.name}. Precio ${priceString} soles. `; 
+                });
+                
+                const utterance = new SpeechSynthesisUtterance(textToSpeak);
+                utterance.lang = 'es-ES'; 
+                utterance.rate = TTS_RATE;
+                
+                if (spanishVoice) {
+                    utterance.voice = spanishVoice;
+                }
+
+                // Mostrar mensaje de lectura activa
+                displayTemporaryMessage(`Leyendo ${count} resultados...`, 'bg-purple-100 text-purple-700');
+
+                utterance.onend = () => {
+                    // *** Después de leer los resultados, reiniciamos la escucha con un DELAY de estabilidad ***
+                    if (isContinuousListening) {
+                         // Reiniciar la escucha inmediatamente.
+                        startNextRecognitionPhase(50); // REDUCIDO A 50MS
+                    } else { 
+                        resetVoiceButton();
+                    }
+                };
+
+                synth.speak(utterance);
+            }
+
+        } else {
+            console.error('El navegador no soporta Text-to-Speech.');
+        }
+
+
+        // --- Funciones de Gestión de Productos (CRUD) ---
+        
+        // ** NUEVA FUNCIÓN: CARGA MASIVA **
+        window.uploadBulkProducts = function() {
+            const dataInput = document.getElementById('bulk-data-input').value.trim();
+            const bulkStatus = document.getElementById('bulk-status');
+            
+            bulkStatus.textContent = ''; // Limpiar mensajes anteriores
+            
+            if (!dataInput) {
+                bulkStatus.classList.remove('text-green-600');
+                bulkStatus.classList.add('text-red-600');
+                bulkStatus.textContent = "Error: Pegue los datos de los productos antes de intentar cargar.";
+                return;
+            }
+
+            const lines = dataInput.split('\n');
+            let successfulUploads = 0;
+            let failedLines = [];
+            
+            // Expresión regular para separar por uno o más espacios en blanco.
+            const delimiterRegex = /\s+/; 
+
+            lines.forEach((line, index) => {
+                const lineNumber = index + 1;
+                const cleanLine = line.trim();
+                if (!cleanLine) return;
+                
+                // Usamos el espacio como separador principal
+                const parts = cleanLine.split(delimiterRegex).map(p => p.trim()).filter(p => p.length > 0);
+                
+                // NOTA: Si el nombre del producto tiene espacios (ej. "Leche Gloria"), este método fallará.
+                // Se debe usar un guion bajo (ej. Leche_Gloria) para nombres con múltiples palabras.
+                
+                if (parts.length < 3) {
+                    failedLines.push(`Línea ${lineNumber}: Faltan datos (Nombre, Stock, Precio) o el formato es incorrecto.`);
+                    return;
+                }
+                
+                // Si el nombre del producto tiene guiones, los reemplazamos por espacios para el display.
+                const name = parts[0].replace(/_/g, ' '); 
+                const quantity = parseInt(parts[1]);
+                const price = parseFloat(parts[2]);
+
+                // Validación de datos
+                if (!name || isNaN(quantity) || isNaN(price) || quantity <= 0 || price <= 0) {
+                    failedLines.push(`Línea ${lineNumber}: Datos de Stock/Precio inválidos. Stock:'${parts[1]}', Precio:'${parts[2]}'.`);
+                    return;
+                }
+
+                // Añadir el producto
+                products.push({
+                    id: nextId++,
+                    name: name,
+                    quantity: quantity,
+                    price: price
+                });
+                successfulUploads++;
+            });
+
+            if (successfulUploads > 0) {
+                // Mostrar resultados y actualizar la lista
+                bulkStatus.classList.remove('text-red-600');
+                bulkStatus.classList.add('text-green-600');
+                bulkStatus.textContent = `¡Carga exitosa! Se añadieron ${successfulUploads} productos.`;
+                
+                // Si hay fallos, añadirlos al mensaje
+                if (failedLines.length > 0) {
+                    bulkStatus.textContent += ` Sin embargo, ${failedLines.length} líneas fallaron. Revise la consola para detalles.`;
+                    console.error("Líneas fallidas en carga masiva:", failedLines.join('\n'));
+                }
+
+                renderProducts(searchInput.value);
+                // Cierre el modal si el 100% de la carga fue exitosa.
+                if (failedLines.length === 0) {
+                    setTimeout(() => closeModal('bulk-upload-modal'), 1500); 
+                }
+
+            } else {
+                bulkStatus.classList.remove('text-green-600');
+                bulkStatus.classList.add('text-red-600');
+                bulkStatus.textContent = "Error: No se pudo añadir ningún producto. Revise el formato (Nombre, Stock, Precio).";
+            }
+        }
+
+        // Función para renderizar la lista de productos
+        // Acepta un filterText opcional que puede venir de la voz.
+        function renderProducts(filterText = searchInput.value) {
+            // Detener la lectura de voz si el usuario cambia el filtro, A MENOS que se esté buscando por voz
+            if (synth && synth.speaking && isListening()) {
+                synth.cancel();
+            }
+
+            listContainer.innerHTML = '';
+            
+            // 1. Limpiar el filtro de espacios
+            const trimmedFilterText = filterText.trim();
+            
+            // 2. Determinar si se debe hablar. SOLO si el filtro NO está vacío.
+            const shouldSpeak = trimmedFilterText.length > 0;
+
+            // ***********************************************************************************
+            // *** Bloqueo de voz si el filtro está vacío ***
+            // ***********************************************************************************
+            if (trimmedFilterText.length === 0) {
+                // Si el filtro está vacío, mostramos todos los productos ordenados.
+                products.sort((a, b) => a.name.localeCompare(b.name));
+                renderAll(products);
+
+                // CORRECCIÓN 1: Usar delay seguro (750ms) al reiniciar el micro después de borrar input
+                if (isAwaitingProductQuery && isContinuousListening) {
+                    startNextRecognitionPhase(); // Usa el default de 750ms (seguro)
+                } else if (!isListening()) {
+                    resetVoiceButton();
+                }
+                return; // CLAVE: Salir de la función aquí para evitar la lógica de habla.
+            }
+            // ***********************************************************************************
+
+            const normalizedFilter = normalizeText(trimmedFilterText);
+            const searchTokens = normalizedFilter.split(/\s+/).filter(token => token.length > 0); 
+            
+            let filteredProducts = products;
+
+            if (searchTokens.length > 0) {
+                 filteredProducts = products.filter(p => {
+                    const normalizedProductName = normalizeText(p.name);
+                    
+                    // Aplica el filtro AND + Coincidencia difusa
+                    return searchTokens.every(searchToken => {
+                        return isFuzzyLikeMatch(normalizedProductName, searchToken);
+                    });
+                }).sort((a, b) => a.name.localeCompare(b.name));
+            } 
+            
+            // Renderizamos la tabla con los resultados filtrados
+            renderAll(filteredProducts);
+
+            // **********************************************
+            // ************ ACTIVACIÓN AUTOMÁTICA ***********
+            // **********************************************
+            if (synth) {
+                // Si hay filtro y hay resultados (o no los hay), leer la respuesta.
+                speakResults(filteredProducts);
+            }
+        }
+
+        function renderAll(list) {
+            listContainer.innerHTML = '';
+            if (list.length === 0) {
+                document.getElementById('no-products-message').classList.remove('hidden');
+            } else {
+                document.getElementById('no-products-message').classList.add('hidden');
+            }
+
+            list.forEach(product => {
+                const row = document.createElement('tr');
+                row.className = 'hover:bg-gray-50 transition duration-100';
+
+                row.innerHTML = `
+                    <td class="px-3 py-4 whitespace-nowrap text-sm font-medium text-gray-900">${product.name}</td>
+                    <td class="px-3 py-4 whitespace-nowrap text-sm text-gray-500">${product.quantity}</td>
+                    <td class="px-3 py-4 whitespace-nowrap text-sm text-gray-500">S/. ${product.price.toFixed(2)}</td>
+                    <td class="px-3 py-4 whitespace-nowrap text-right text-sm font-medium text-center space-x-2">
+                        <button onclick="editProduct(${product.id})" class="text-blue-600 hover:text-blue-900 font-semibold px-2 py-1 rounded-md transition duration-150">
+                            Editar
+                        </button>
+                        <button onclick="deleteProduct(${product.id})" class="text-red-600 hover:text-red-900 font-semibold ml-1 px-2 py-1 rounded-md transition duration-150">
+                            Eliminar
+                        </button>
+                        <!-- BOTÓN DE LECTURA DE VOZ INDIVIDUAL -->
+                        ${synth ? `<button onclick="speakProduct(${product.id})" class="text-purple-600 hover:text-purple-900 font-semibold ml-1 px-2 py-1 rounded-md transition duration-150">
+                            Leer
+                        </button>` : ''}
+                    </td>
+                `;
+                listContainer.appendChild(row);
+            });
+        }
+
+        // Manejador del formulario para añadir/editar
+        form.addEventListener('submit', function(e) {
+            e.preventDefault();
+
+            const id = document.getElementById('product-id').value;
+            const name = document.getElementById('product-name').value.trim();
+            const quantity = parseInt(document.getElementById('product-quantity').value);
+            const price = parseFloat(document.getElementById('product-price').value);
+
+            // Validación simplificada
+            if (!name || isNaN(quantity) || isNaN(price) || quantity <= 0 || price <= 0) {
+                displayTemporaryMessage('Por favor, complete todos los campos correctamente.', 'bg-yellow-100 text-yellow-700');
+                return;
+            }
+
+            const newProductData = {
+                name,
+                quantity,
+                price
+            };
+
+            if (id) {
+                // Editar producto existente
+                const index = products.findIndex(p => p.id === parseInt(id));
+                if (index > -1) {
+                    products[index] = { id: parseInt(id), ...newProductData };
+                    displayTemporaryMessage(`Producto "${name}" actualizado con éxito.`, 'bg-blue-100 text-blue-700');
+                }
+                resetForm();
+            } else {
+                // Añadir nuevo producto
+                products.push({
+                    id: nextId++,
+                    ...newProductData
+                });
+                displayTemporaryMessage(`Producto "${name}" añadido al inventario.`, 'bg-green-100 text-green-700');
+                form.reset();
+            }
+
+            renderProducts(searchInput.value);
+        });
+
+        // Carga los datos del producto en el formulario para editar
+        window.editProduct = function(id) {
+            const product = products.find(p => p.id === id);
+            if (product) {
+                document.getElementById('product-id').value = product.id;
+                document.getElementById('product-name').value = product.name;
+                document.getElementById('product-quantity').value = product.quantity;
+                document.getElementById('product-price').value = product.price;
+
+                // Actualiza el texto del formulario
+                document.getElementById('form-title').textContent = `Editar Producto: ${product.name}`;
+                document.getElementById('submit-btn-text').textContent = 'Guardar Cambios';
+                document.getElementById('submit-btn').classList.remove('bg-green-500', 'hover:bg-green-600');
+                document.getElementById('submit-btn').classList.add('bg-blue-500', 'hover:bg-blue-600');
+            }
+        }
+
+        // Elimina un producto por ID
+        window.deleteProduct = function(id) {
+            const productIndex = products.findIndex(p => p.id === id);
+
+            if (productIndex > -1) {
+                const productName = products[productIndex].name;
+                // Usamos window.confirm ya que es una acción destructiva
+                const confirmation = '¿Está seguro que desea eliminar el producto: ' + productName + '?';
+
+                if (window.confirm(confirmation)) {
+                    products.splice(productIndex, 1);
+                    renderProducts(searchInput.value);
+                    displayTemporaryMessage(`Producto "${productName}" eliminado.`, 'bg-red-100 text-red-700');
+                    if (document.getElementById('product-id').value === String(id)) {
+                        resetForm();
+                    }
+                }
+            }
+        }
+
+        // Limpia el formulario y vuelve al modo 'Añadir'
+        function resetForm() {
+            document.getElementById('product-id').value = '';
+            document.getElementById('form-title').textContent = 'Añadir Nuevo Producto';
+            document.getElementById('submit-btn-text').textContent = 'Añadir Producto';
+            document.getElementById('submit-btn').classList.add('bg-green-500', 'hover:bg-green-600');
+            document.getElementById('submit-btn').classList.remove('bg-blue-500', 'hover:bg-blue-600');
+            form.reset();
+        }
+
+        // --- Funciones de Búsqueda ---
+        
+        // MODIFICADA: Acepta el texto del input O un texto directo de la voz.
+        window.searchProducts = function(voiceText = null) {
+            const filterText = voiceText !== null ? voiceText : searchInput.value;
+            
+            // REVERTIDO: Si el texto viene de la voz, actualizar la caja de texto con la transcripción completa.
+            if (voiceText !== null) {
+                searchInput.value = filterText;
+            }
+
+            // Bloqueo de voz si se borra el input manualmente
+            if (voiceText === null && filterText.trim().length === 0) {
+                if (synth && synth.speaking) {
+                    synth.cancel();
+                }
+            }
+            
+            renderProducts(filterText);
+        }
+        
+        // Inicializar con datos de ejemplo
+        function initializeApp() {
+            // Datos iniciales
+            products.push({ id: nextId++, name: 'Arroz Costeño', quantity: 20, price: 150.00 });
+            products.push({ id: nextId++, name: 'Aceite Primor', quantity: 55, price: 10.50 });
+            products.push({ id: nextId++, name: 'Azúcar Rubia', quantity: 120, price: 3.50 });
+            products.push({ id: nextId++, name: 'Fideos Don Vittorio', quantity: 80, price: 4.20 });
+            products.push({ id: nextId++, name: 'Gaseosa Inca Kola', quantity: 45, price: 8.00 });
+            products.push({ id: nextId++, name: 'Triángulo de Donofrio', quantity: 30, price: 2.50 }); 
+            products.push({ id: nextId++, name: 'Pasta Dental Kolinos', quantity: 70, price: 7.00 });
+            products.push({ id: nextId++, name: 'Serveza Pilsen', quantity: 150, price: 4.50 });
+
+            nextId = products.length + 1;
+
+            renderProducts();
+            
+            // ** INICIO AUTOMÁTICO **
+            window.onload = () => {
+                displayTemporaryMessage('La aplicación necesita un clic en el botón rojo para iniciar el permiso y la escucha continua. Luego diga el producto que busca.', 'bg-yellow-100', 'text-yellow-700');
+            };
+        }
+
+        initializeApp();
+
+    </script>
+</body>
+</html>
