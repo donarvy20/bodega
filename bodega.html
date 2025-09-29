@@ -800,10 +800,12 @@
                 displayTemporaryMessage(`Leyendo ${count} resultados...`, 'bg-purple-100 text-purple-700');
 
                 utterance.onend = () => {
-                    // *** Después de leer los resultados, reiniciamos la escucha con un DELAY de estabilidad ***
+                    // *** Después de leer los resultados, volvemos a modo ESPERANDO COMANDO para el próximo intento ***
                     if (isContinuousListening) {
-                         // Reiniciar la escucha inmediatamente.
-                        startNextRecognitionPhase(50); // REDUCIDO A 50MS
+                        // CLAVE: Volver a modo comando
+                        isAwaitingProductQuery = false; 
+                         // Reiniciar la escucha inmediatamente (50ms).
+                        startNextRecognitionPhase(50); 
                     } else { 
                         resetVoiceButton();
                     }
