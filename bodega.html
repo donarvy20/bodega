@@ -35,7 +35,7 @@
             70% { box-shadow: 0 0 0 15px rgba(239, 68, 68, 0); }
             100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); }
         }
-        /* El modo de escucha continua ahora es el modo activo de búsqueda */
+        /* El modo de escucha activa */
         .listening-mode { 
             background-color: #2563eb !important; /* Azul 600 */
             color: white !important;
@@ -49,7 +49,7 @@
             <h1 class="text-4xl font-extrabold text-blue-800 mb-2">Gestión de Inventario de Bodega</h1>
             <p class="text-gray-600">Administración de productos con búsqueda por texto, voz y lectura automática de precios.</p>
             <div id="voice-status" class="mt-2 p-2 text-sm font-medium rounded-lg text-center bg-blue-100 text-blue-700 hidden">
-                Haga clic en el micrófono para iniciar la escucha continua.
+                Haga clic en el micrófono para iniciar la búsqueda por voz.
             </div>
         </header>
 
@@ -88,11 +88,11 @@
                        class="flex-grow p-3 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500 shadow-sm">
 
                 <button id="voice-search-btn" class="voice-btn w-full md:w-auto flex items-center justify-center bg-red-500 text-white font-bold py-3 px-6 rounded-lg hover:bg-red-600 transition duration-150 ease-in-out shadow-lg"
-                        onclick="toggleContinuousSearch()">
+                        onclick="startVoiceSearch()">
                     <svg id="mic-icon" xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 mr-2" viewBox="0 0 24 24" fill="currentColor">
                         <path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3zm5.5-3c0 3.53-2.61 6.44-6 6.93V21h-1v-4.07c-3.39-.49-6-3.4-6-6.93h-2c0 4.84 3.65 8.8 8.44 9.49V23h3v-2.51c4.79-.69 8.44-4.65 8.44-9.49h-2z"/>
                     </svg>
-                    <span id="voice-btn-text">Iniciar Escucha Continua</span>
+                    <span id="voice-btn-text">Búsqueda por Voz</span>
                 </button>
             </div>
         </div>
@@ -188,30 +188,10 @@
         const voiceBtnText = document.getElementById('voice-btn-text');
         const voiceStatus = document.getElementById('voice-status');
         
-        // ** ESTADO DE VOZ **
-        let isContinuousListening = false; // Controla si el ciclo de escucha debe continuar.
-        let isStartingRecognition = false; // Bandera para evitar el InvalidStateError
-        let isAwaitingProductQuery = false; // Nuevo estado: True si ya se escuchó el comando y ahora se espera el producto.
-        let commandTimer = null;            // Temporizador para la espera del comando (60s)
+        // ** ESTADO DE VOZ (Simplificado a solo 'escuchando') **
+        let isStartingRecognition = false; 
         
         // --- Frases Aleatorias ---
-
-        const welcomePhrases = [
-            "Adelante, dígame de qué producto desea los precios.",
-            "Estoy lista. ¿Qué producto necesita buscar?",
-            "Con gusto. Nombre el artículo y le daré su precio.",
-            "Búsqueda activada. ¿Cuál es el producto?",
-            "Pregúnteme por el artículo que necesite. Escuchando.",
-            "Adelante. ¿De qué producto quiere saber el costo?",
-            "Dígame el nombre del producto, por favor.",
-            "Precio solicitado. Le escucho.",
-            "Perfecto. ¿Qué producto debo buscar ahora?",
-            "Cuenteme, ¿qué producto desea consultar?",
-            "Diga el nombre del producto que le interesa.",
-            "Esperando su consulta. Nombre el producto.",
-            "¿Cuál es el siguiente artículo que desea consultar?",
-            "Listo para buscar. Dígame el producto."
-        ];
 
         const notFoundPhrases = [
             "No encontré ese producto en el inventario. ¿Podría repetir o probar con otro nombre?",
@@ -233,39 +213,6 @@
             return phraseArray[index];
         }
         
-        // --- Funciones de Control de Inactividad ---
-
-        /**
-         * Limpia los temporizadores de comando.
-         */
-        function clearInactivityTimers() {
-            if (commandTimer) {
-                clearTimeout(commandTimer);
-                commandTimer = null;
-            }
-        }
-
-        /**
-         * Inicia el temporizador de 60 segundos cuando la aplicación está esperando el comando.
-         */
-        function startCommandTimeout() {
-            if (commandTimer) clearTimeout(commandTimer);
-
-            // Iniciar el contador de 60 segundos
-            commandTimer = setTimeout(() => {
-                
-                console.log("[TIMER] El comando ha expirado (60s). Reiniciando el ciclo de escucha.");
-                
-                // La aplicación ya está en isAwaitingProductQuery = false. Simplemente la reiniciamos.
-                voiceStatus.textContent = "Tiempo de espera agotado. Diga el comando para reactivar la búsqueda.";
-                
-                // Reiniciar escucha continua.
-                if (isContinuousListening) {
-                    startNextRecognitionPhase(50); 
-                }
-            }, 60000); // 60 segundos
-        }
-
 
         // --- Funciones de Utilidad ---
 
@@ -283,46 +230,34 @@
         }
 
         /**
-         * Implementación simplificada de Umbral de Similitud (Fuzzy Like) para búsqueda.
+         * Implementación de Coincidencia Difusa (Fuzzy Like) mejorada.
+         * ALTA PRECISIÓN: Solo coincide si la palabra buscada está fuertemente incluida,
+         * tolerando acentos y variaciones fonéticas comunes (C/K, S/Z).
+         * Se eliminó la lógica de Levenshtein simple para prevenir falsos positivos como 'queso' encontrando 'paquete'.
          * @param {string} normalizedProductName Nombre del producto (normalizado).
          * @param {string} searchToken Token de búsqueda (normalizado).
          * @returns {boolean} True si el token coincide de forma flexible.
          */
         function isFuzzyLikeMatch(normalizedProductName, searchToken) {
-            const tokenLength = searchToken.length;
             
             // 1. Coincidencia Fonética/Tipográfica (C/K, S/Z)
+            // Crea un patrón flexible que tolera errores comunes como C/K, S/Z, y K.
             let pattern = searchToken
                 .replace(/c/g, '[csz]') 
                 .replace(/z/g, '[csz]') 
                 .replace(/s/g, '[csz]') 
                 .replace(/k/g, '[ck]');
             
-            const regexExact = new RegExp(pattern, 'i'); 
-            if (regexExact.test(normalizedProductName)) {
+            // Crea una expresión regular para buscar el patrón dentro del nombre
+            const regex = new RegExp(pattern, 'i'); 
+            
+            if (regex.test(normalizedProductName)) {
                 return true;
             }
-
-            // 2. Coincidencia parcial por Umbral de Similitud (Levenshtein simple)
-            if (tokenLength < 3) {
-                return false; 
-            }
-
-            for (let i = 0; i <= normalizedProductName.length - tokenLength; i++) {
-                const subString = normalizedProductName.substring(i, i + tokenLength);
-                let differences = 0;
-                
-                for (let j = 0; j < tokenLength; j++) {
-                    if (subString[j] !== searchToken[j]) {
-                        differences++;
-                    }
-                }
-                
-                const maxDifferences = tokenLength >= 5 ? 2 : 1;
-                
-                if (differences <= maxDifferences) {
-                    return true;
-                }
+            
+            // 2. Coincidencia simple de inclusión si el regex falla (ej. para tokens muy cortos)
+            if (normalizedProductName.includes(searchToken)) {
+                return true;
             }
             
             return false;
@@ -489,31 +424,26 @@
         const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
         let recognition = null;
         
-        /** * Inicia la siguiente fase de reconocimiento con un retardo seguro y control de estado.
+        /** * Inicia la siguiente fase de reconocimiento.
          */
-        function startNextRecognitionPhase(delay = 750) { 
-            if (!recognition || !isContinuousListening || isStartingRecognition) return;
+        function startNextRecognitionPhase(delay = 50) { 
+            if (!recognition || isStartingRecognition) return;
 
             isStartingRecognition = true; // Bloquear nuevos intentos de start
 
             setTimeout(() => {
-                if (isContinuousListening) {
-                    try {
-                        recognition.start();
-                    } catch (e) {
-                        isStartingRecognition = false; // Liberar la bandera de bloqueo
-                        
-                        // Simplificar el catch para evitar UNHANDLEDREJECTION
-                        if (e.name === 'InvalidStateError') {
-                            console.warn("InvalidStateError: El start() falló. Esperando el siguiente ciclo onend/TTS.");
-                        } else {
-                            console.error("Error al iniciar reconocimiento continuo:", e);
-                            isContinuousListening = false;
-                            resetVoiceButton();
-                        }
+                try {
+                    recognition.start();
+                } catch (e) {
+                    isStartingRecognition = false; // Liberar la bandera de bloqueo
+                    
+                    // Simplificar el catch para evitar UNHANDLEDREJECTION
+                    if (e.name === 'InvalidStateError') {
+                        console.warn("InvalidStateError: El start() falló. Esperando el siguiente ciclo onend/TTS.");
+                    } else {
+                        console.error("Error al iniciar reconocimiento:", e);
+                        resetVoiceButton();
                     }
-                } else {
-                    isStartingRecognition = false; // Liberar la bandera
                 }
             }, delay); 
         }
@@ -527,31 +457,18 @@
             recognition.interimResults = false;
 
             recognition.onstart = () => {
-                // Detener cualquier lectura de voz activa al iniciar la búsqueda
                 if (window.speechSynthesis.speaking) window.speechSynthesis.cancel();
                 
                 voiceBtn.classList.add('recording', 'listening-mode');
                 voiceBtn.classList.remove('active-mode'); 
-                isStartingRecognition = false; // La bandera se libera porque el start fue exitoso
+                isStartingRecognition = false; 
 
-                voiceBtnText.textContent = isAwaitingProductQuery ? 'Escuchando Producto...' : 'Esperando Comando...';
-                
-                // *** MENSAJE DE ESTADO ACTUALIZADO ***
-                voiceStatus.textContent = isAwaitingProductQuery 
-                    ? 'Diga el nombre del producto que desea buscar.'
-                    : 'Modo Continuo activo. Diga el comando de activación.'; 
+                // UI para el modo de escucha directa
+                voiceBtnText.textContent = 'Escuchando Producto...';
+                voiceStatus.textContent = 'Diga la frase de búsqueda (ej. "precio de aceite").'; 
                 
                 voiceStatus.classList.add('bg-blue-100', 'text-blue-700');
-                voiceStatus.classList.remove('bg-red-100', 'text-red-700');
                 voiceStatus.classList.remove('hidden');
-
-                // *** INICIAR TEMPORIZADOR DE COMANDO SOLO SI ESTAMOS EN MODO ESPERA ***
-                if (!isAwaitingProductQuery) {
-                    startCommandTimeout();
-                } else {
-                    // Si ya estamos en modo BÚSQUEDA RÁPIDA, NO PONER TEMPORIZADOR DE COMANDO
-                    clearInactivityTimers();
-                }
             };
 
             recognition.onresult = (event) => {
@@ -559,68 +476,22 @@
                 // Limpiamos la transcripción y normalizamos para la comparación
                 const cleanTranscript = transcript.replace(/[.,?!¡¿]/g, '').trim().toLowerCase(); 
                 
-                // 1. Detenemos la grabación tan pronto como tenemos un resultado final
+                // Detenemos la grabación tan pronto como tenemos un resultado final
                 recognition.stop(); 
                 
-                // Muestra en consola lo que se escuchó para debug
                 console.log(`[RECOGNISED] Transcripción limpia: ${cleanTranscript}`); 
 
-                // **********************************
-                // ESTADO 2: ESPERANDO NOMBRE DEL PRODUCTO (BÚSQUEDA RÁPIDA ACTIVA)
-                if (isAwaitingProductQuery) {
-                    clearInactivityTimers(); // Interrumpir cualquier temporizador de comando
-                    
-                    // LÓGICA REVERTIDA: Poner la transcripción completa en el input.
+                // --- BÚSQUEDA DIRECTA DE PRODUCTO ---
+                if (cleanTranscript.length > 0) {
+                    // Ponemos la transcripción completa en el input.
                     searchInput.value = transcript.trim();
                     
                     // Usar la transcripción limpia para la búsqueda
                     searchProducts(cleanTranscript); 
-                    
-                    // El reinicio a la escucha continua es manejado por el onend del TTS (speakResults)
-                    return;
+                } else {
+                    // Si no se escuchó nada, resetear el botón si no hay TTS hablando
+                    if (!synth.speaking) resetVoiceButton();
                 }
-
-                // **********************************
-                // ESTADO 1: ESPERANDO COMANDO DE ACTIVACIÓN
-                
-                // ** LÓGICA DE ACTIVACIÓN FLEXIBLE **
-                // Se activa si contiene alguna de estas palabras clave de precio:
-                const isActivationCommand = cleanTranscript.includes("precio") || 
-                                            cleanTranscript.includes("costo") || 
-                                            cleanTranscript.includes("vale") || 
-                                            cleanTranscript.includes("cuanto") ||
-                                            cleanTranscript.includes("como esta");
-
-                if (isActivationCommand) {
-                    console.log("[SUCCESS] Comando de activación detectado. Iniciando búsqueda rápida."); // LOG DE ÉXITO
-                    // *** ACCIÓN CLAVE: Cancelar temporizadores si el usuario re-activa el comando ***
-                    clearInactivityTimers();
-
-                    isAwaitingProductQuery = true; // Activar estado de espera de producto (ILIMITADO)
-
-                    voiceStatus.classList.remove('hidden');
-                    voiceStatus.textContent = 'COMANDO ACTIVADO. Escuchando producto...';
-
-                    // TTS: Responder al usuario (frase aleatoria) y luego pasar al estado de búsqueda
-                    const responsePhrase = getRandomPhrase(welcomePhrases);
-                    speakPrompt(responsePhrase, () => {
-                         // Callback se ejecuta al terminar de hablar
-                         if (isContinuousListening) {
-                             // REINICIO DE ESTABILIDAD: REDUCIDO A 50MS
-                             startNextRecognitionPhase(50); 
-                         }
-                    });
-                    return; // El TTS callback manejará el reinicio de reconocimiento.
-                }
-
-                // Si la transcripción no es el comando, reiniciar para dar otra oportunidad
-                if (cleanTranscript.length > 0 && isContinuousListening) {
-                    console.log(`Frase no reconocida como comando. Reiniciando escucha para dar otra oportunidad.`);
-                    // REINICIO RÁPIDO: 50ms para que no se pierda la siguiente frase.
-                    startNextRecognitionPhase(50); 
-                }
-                
-                // Si no fue el comando, onend se encargará de reiniciar (si es no-speech) 
             };
 
             recognition.onerror = (event) => {
@@ -629,66 +500,43 @@
                 
                 if (event.error === 'not-allowed') {
                     message = 'Permiso de micrófono denegado. Haga clic en el botón para iniciar.';
-                    isContinuousListening = false; 
-                    resetVoiceButton();
                 } else if (event.error === 'no-speech') {
-                    // Si es no-speech, la sesión se cerró y onend se disparará para reiniciarlo.
-                    if (isContinuousListening) {
-                        console.log('No se detectó habla (no-speech). Reinicio controlado vía onend.');
-                    }
-                } else {
-                    displayTemporaryMessage(message, 'bg-red-100', 'text-red-700');
+                    // Si es no-speech, la sesión se cerró y onend se disparará para resetear el botón.
+                    message = 'No se detectó su voz. Intente hablar más claro.';
                 }
+                
+                recognition.stop();
+                displayTemporaryMessage(message, 'bg-red-100', 'text-red-700');
             };
             
-            // ** LÓGICA DE ESCUCHA CONTINUA - PUNTO CRÍTICO DE REINICIO **
+            // ** LÓGICA DE ESCUCHA - UNA SOLA VEZ **
             recognition.onend = () => {
                 voiceBtn.classList.remove('recording');
 
-                // Si el modo continuo está activo y TTS no está hablando, reiniciamos.
-                // Si TTS está hablando, su onend (callback) lo reiniciará.
-                if (isContinuousListening && !synth.speaking) {
-                    // Este es el único punto de reinicio para evitar conflictos de estado (InvalidStateError/no-speech)
-                    startNextRecognitionPhase();
-                } else if (!isContinuousListening) {
-                    // Si fue desactivado manualmente, restablecer
+                // Si no hay voz sintetizada hablando (de resultados), resetear el botón.
+                // Si TTS está hablando (speakResults), su onend (callback) lo hará.
+                if (!synth.speaking) {
                     resetVoiceButton();
                 }
             };
         }
 
         function resetVoiceButton() {
-            isContinuousListening = false;
-            isStartingRecognition = false; // Asegurar que la bandera esté limpia al resetear
-            isAwaitingProductQuery = false; // Resetear estado de búsqueda de producto
-            clearInactivityTimers(); // Asegurar que no quede ningún timer corriendo
-            voiceBtn.classList.remove('recording', 'listening-mode', 'active-mode');
-            voiceBtnText.textContent = 'Iniciar Escucha Continua';
-            voiceStatus.textContent = 'Haga clic en el micrófono para iniciar la escucha continua.';
+            isStartingRecognition = false; 
+            voiceBtn.classList.remove('recording', 'listening-mode', 'active-mode', 'bg-blue-500', 'hover:bg-blue-600');
+            voiceBtn.classList.add('bg-red-500', 'hover:bg-red-600');
+            voiceBtnText.textContent = 'Búsqueda por Voz'; 
+            voiceStatus.textContent = 'Haga clic en el micrófono para iniciar la búsqueda por voz.';
             voiceStatus.classList.add('bg-blue-100', 'text-blue-700');
             voiceStatus.classList.remove('bg-red-100', 'text-red-700', 'bg-yellow-100', 'text-yellow-700', 'bg-purple-100', 'text-purple-700');
         }
 
-        // Toggle para controlar el ciclo continuo
-        window.toggleContinuousSearch = function() {
-            if (!recognition) return;
+        // Toggle para controlar el ciclo de Búsqueda por Voz
+        window.startVoiceSearch = function() {
+            if (!recognition || isListening()) return;
 
-            if (isContinuousListening) {
-                // Detener el ciclo continuo y la grabación
-                isContinuousListening = false;
-                isStartingRecognition = false;
-                clearInactivityTimers(); // Limpiar temporizadores al apagar
-                try {
-                    recognition.stop();
-                } catch (e) {
-                    resetVoiceButton();
-                }
-            } else {
-                // Iniciar el ciclo continuo
-                isContinuousListening = true;
-                isAwaitingProductQuery = false; // Siempre inicia esperando el comando
-                startNextRecognitionPhase(50); // Iniciar con un pequeño retardo.
-            }
+            // Iniciar el reconocimiento de voz (single shot)
+            startNextRecognitionPhase(50); 
         }
 
         // --- Funciones de Texto a Voz (TTS) ---
@@ -800,15 +648,8 @@
                 displayTemporaryMessage(`Leyendo ${count} resultados...`, 'bg-purple-100 text-purple-700');
 
                 utterance.onend = () => {
-                    // *** Después de leer los resultados, volvemos a modo ESPERANDO COMANDO para el próximo intento ***
-                    if (isContinuousListening) {
-                        // CLAVE: Volver a modo comando
-                        isAwaitingProductQuery = false; 
-                         // Reiniciar la escucha inmediatamente (50ms).
-                        startNextRecognitionPhase(50); 
-                    } else { 
-                        resetVoiceButton();
-                    }
+                    // Después de leer los resultados, reseteamos el botón.
+                    resetVoiceButton();
                 };
 
                 synth.speak(utterance);
@@ -930,10 +771,7 @@
                 products.sort((a, b) => a.name.localeCompare(b.name));
                 renderAll(products);
 
-                // CORRECCIÓN 1: Usar delay seguro (750ms) al reiniciar el micro después de borrar input
-                if (isAwaitingProductQuery && isContinuousListening) {
-                    startNextRecognitionPhase(); // Usa el default de 750ms (seguro)
-                } else if (!isListening()) {
+                if (!isListening() && !synth.speaking) {
                     resetVoiceButton();
                 }
                 return; // CLAVE: Salir de la función aquí para evitar la lógica de habla.
@@ -962,8 +800,8 @@
             // **********************************************
             // ************ ACTIVACIÓN AUTOMÁTICA ***********
             // **********************************************
-            if (synth) {
-                // Si hay filtro y hay resultados (o no los hay), leer la respuesta.
+            if (synth && shouldSpeak) {
+                // Si hay filtro (teclado o voz) y hay resultados (o no los hay), leer la respuesta.
                 speakResults(filteredProducts);
             }
         }
@@ -1100,7 +938,7 @@
         window.searchProducts = function(voiceText = null) {
             const filterText = voiceText !== null ? voiceText : searchInput.value;
             
-            // REVERTIDO: Si el texto viene de la voz, actualizar la caja de texto con la transcripción completa.
+            // Si el texto viene de la voz, actualizar la caja de texto con la transcripción.
             if (voiceText !== null) {
                 searchInput.value = filterText;
             }
@@ -1122,14 +960,17 @@
 
             if (!dataLoaded) {
                  // Si no hay datos guardados, cargar datos iniciales (Stock ahora es solo 1 por compatibilidad interna)
-                products.push({ id: nextId++, name: 'Arroz Costeño', quantity: 1, price: 150.00 });
+                products.push({ id: nextId++, name: 'Arroz Costeño', quantity: 1, price: 15.00 });
                 products.push({ id: nextId++, name: 'Aceite Primor', quantity: 1, price: 10.50 });
-                products.push({ id: nextId++, name: 'Azúcar Rubia', quantity: 1, price: 3.50 });
+                products.push({ id: nextId++, name: 'Azúcar Rubia (Kg)', quantity: 1, price: 3.50 });
+                products.push({ id: nextId++, name: 'Queso Fresco (Kg)', quantity: 1, price: 25.00 }); 
                 products.push({ id: nextId++, name: 'Fideos Don Vittorio', quantity: 1, price: 4.20 });
-                products.push({ id: nextId++, name: 'Gaseosa Inca Kola', quantity: 1, price: 8.00 });
+                products.push({ id: nextId++, name: 'Gaseosa Inca Kola (3L)', quantity: 1, price: 8.00 });
                 products.push({ id: nextId++, name: 'Triángulo de Donofrio', quantity: 1, price: 2.50 }); 
                 products.push({ id: nextId++, name: 'Pasta Dental Kolinos', quantity: 1, price: 7.00 });
-                products.push({ id: nextId++, name: 'Serveza Pilsen', quantity: 1, price: 4.50 });
+                products.push({ id: nextId++, name: 'Cerveza Pilsen (Lata)', quantity: 1, price: 4.50 }); // Corregido: Serveza -> Cerveza
+                products.push({ id: nextId++, name: 'Paquete Always Grande', quantity: 1, price: 12.00 }); 
+                products.push({ id: nextId++, name: 'Leche Pequeña Nestlé', quantity: 1, price: 2.50 }); 
 
                 nextId = products.length + 1;
                 saveProductsToLocalStorage(); // Guardar los datos iniciales
@@ -1139,7 +980,8 @@
             
             // ** INICIO AUTOMÁTICO **
             window.onload = () => {
-                displayTemporaryMessage('La aplicación necesita un clic en el botón rojo para iniciar el permiso y la escucha continua. Luego diga el producto que busca.', 'bg-yellow-100', 'text-yellow-700');
+                resetVoiceButton(); // Asegurar estado inicial
+                displayTemporaryMessage('Haga clic en el botón rojo para iniciar la búsqueda por voz.', 'bg-yellow-100', 'text-yellow-700');
             };
         }
 
