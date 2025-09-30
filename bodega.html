@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -213,7 +212,8 @@
             'hacia', 'hasta', 'mediante', 'para', 'por', 'según', 'sin', 'so', 'sobre', 'tras',
             'el', 'la', 'los', 'las', 'un', 'una', 'unos', 'unas', 'mi', 'su', 'es', 'está',
             'precio', 'precios', 'cuanto', 'como', 'esta', 'vale', 'costo', // Palabras de comando de precio
-            'pequena', 'grande' // Descriptores de tamaño
+            'pequena', 'grande', // Descriptores de tamaño
+            'el', 'la', 'los', 'las' // Re-añadido para asegurar que se ignoren artículos en frases
         ]);
 
         /**
@@ -252,13 +252,12 @@
             
             // 1. Coincidencia Fonética/Tipográfica (C/K, S/Z) - MEJORA CLAVE
             // Crea un patrón flexible para S, C, Z, K. Esto asegura que 'cusqueña' encuentre 'cuzqueña'.
-            // También se incluye la 'c' porque es un error común buscar 'k' en vez de 'c' (ej. 'kusqueña')
             let pattern = searchToken
                 .replace(/[csz]/g, '[csz]') 
                 .replace(/k/g, '[ck]');
             
-            // La expresión regular busca la coincidencia del token dentro del nombre normalizado.
-            // La palabra \b(pattern) asegura que la coincidencia sea al inicio de una palabra, lo cual mejora la precisión.
+            // La expresión regular busca la coincidencia del token al inicio de una palabra.
+            // Esto evita que "que" en 'Queso' coincida con "que" en 'Paquete'.
             const regex = new RegExp('\\b' + pattern, 'i'); 
             
             if (regex.test(normalizedProductName)) {
@@ -266,7 +265,10 @@
             }
             
             // 2. Coincidencia simple de inclusión como fallback (si el regex falla)
+            // ESTE FALLBACK ES MENOS ESTRICTO PERO NECESARIO PARA ALGUNAS COMBINACIONES DE PALABRAS
             if (normalizedProductName.includes(searchToken)) {
+                 // Añadimos una comprobación extra: si la búsqueda es muy corta (<4 letras) no la aceptamos.
+                if (searchToken.length < 4) return false;
                 return true;
             }
             
@@ -493,10 +495,11 @@
         if (SpeechRecognition) {
             recognition = new SpeechRecognition();
             recognition.lang = 'es-ES'; 
-            recognition.interimResults = true; 
             recognition.maxAlternatives = 1;
-            recognition.continuous = false; 
-            recognition.interimResults = false;
+            
+            // CLAVE: Permite la escucha prolongada y no detiene la API con la primera pausa.
+            recognition.continuous = true; 
+            recognition.interimResults = true; 
 
             recognition.onstart = () => {
                 if (window.speechSynthesis.speaking) window.speechSynthesis.cancel();
@@ -514,25 +517,33 @@
             };
 
             recognition.onresult = (event) => {
-                let transcript = event.results[event.results.length - 1][0].transcript;
-                // Limpiamos la transcripción y normalizamos para la comparación
-                const cleanTranscript = transcript.replace(/[.,?!¡¿]/g, '').trim().toLowerCase(); 
-                
-                // Detenemos la grabación tan pronto como tenemos un resultado final
-                recognition.stop(); 
-                
-                console.log(`[RECOGNISED] Transcripción limpia: ${cleanTranscript}`); 
+                let finalTranscript = '';
+                // Iterar sobre los resultados para obtener la transcripción final
+                for (let i = event.resultIndex; i < event.results.length; ++i) {
+                    if (event.results[i].isFinal) {
+                        finalTranscript += event.results[i][0].transcript;
+                    }
+                }
 
-                // --- BÚSQUEDA DIRECTA DE PRODUCTO ---
-                if (cleanTranscript.length > 0) {
-                    // Ponemos la transcripción completa en el input.
-                    searchInput.value = transcript.trim();
+                if (finalTranscript.length > 0) {
+                    const cleanTranscript = finalTranscript.replace(/[.,?!¡¿]/g, '').trim().toLowerCase(); 
                     
-                    // Usar la transcripción limpia para la búsqueda
-                    searchProducts(cleanTranscript); 
-                } else {
-                    // Si no se escuchó nada, resetear el botón si no hay TTS hablando
-                    if (!synth.speaking) resetVoiceButton();
+                    console.log(`[RECOGNISED] Transcripción limpia: ${cleanTranscript}`); 
+
+                    // Detenemos la grabación después de recibir un resultado final
+                    recognition.stop(); 
+                    
+                    // --- BÚSQUEDA DIRECTA DE PRODUCTO ---
+                    if (cleanTranscript.length > 0) {
+                        // Ponemos la transcripción completa en el input.
+                        searchInput.value = finalTranscript.trim();
+                        
+                        // Usar la transcripción limpia para la búsqueda
+                        searchProducts(cleanTranscript); 
+                    } else {
+                        // Si no se escuchó nada, resetear el botón si no hay TTS hablando
+                        if (!synth.speaking) resetVoiceButton();
+                    }
                 }
             };
 
@@ -543,11 +554,11 @@
                 if (event.error === 'not-allowed') {
                     message = 'Permiso de micrófono denegado. Haga clic en el botón para iniciar.';
                 } else if (event.error === 'no-speech') {
-                    // Si es no-speech, la sesión se cerró y onend se disparará para resetear el botón.
                     message = 'No se detectó su voz. Intente hablar más claro.';
                 }
                 
-                recognition.stop();
+                // Forzamos el stop para asegurar que onend se dispare y limpie el estado
+                recognition.stop(); 
                 displayTemporaryMessage(message, 'bg-red-100', 'text-red-700');
             };
             
@@ -791,6 +802,24 @@
 
         // Función para renderizar la lista de productos
         // Acepta un filterText opcional que puede venir de la voz.
+        window.searchProducts = function(voiceText = null) {
+            const filterText = voiceText !== null ? voiceText : searchInput.value;
+            
+            // Si el texto viene de la voz, actualizar la caja de texto con la transcripción.
+            if (voiceText !== null) {
+                searchInput.value = filterText;
+            }
+
+            // Bloqueo de voz si se borra el input manualmente
+            if (voiceText === null && filterText.trim().length === 0) {
+                if (synth && synth.speaking) {
+                    synth.cancel();
+                }
+            }
+            
+            renderProducts(filterText);
+        }
+
         function renderProducts(filterText = searchInput.value) {
             // Detener la lectura de voz si el usuario cambia el filtro, A MENOS que se esté buscando por voz
             if (synth && synth.speaking && isListening()) {
@@ -825,15 +854,11 @@
             // 3. Obtener tokens de la búsqueda original.
             let searchTokens = normalizedFilter.split(/\s+/).filter(token => token.length > 0);
             
-            // 4. Determinar si hay alguna palabra que NO sea de relleno
-            const hasSpecificTerms = searchTokens.some(token => !fillerWords.has(token));
-            
-            // 5. Si hay términos específicos, filtrar las palabras de relleno para la búsqueda final.
-            if (hasSpecificTerms) {
-                searchTokens = searchTokens.filter(token => !fillerWords.has(token));
+            // 4. Filtrar las palabras de relleno, pero SÓLO si hay más de un token
+            if (searchTokens.length > 1) {
+                 searchTokens = searchTokens.filter(token => !fillerWords.has(token));
             }
-            // Si hasSpecificTerms es falso, searchTokens conservará las palabras genéricas (como 'cerveza')
-            // para permitir la búsqueda de categorías.
+            // Si queda solo 1 token (ej. "cerveza"), se conserva para la búsqueda.
 
 
             let filteredProducts = products;
@@ -987,27 +1012,6 @@
             form.reset();
         }
 
-        // --- Funciones de Búsqueda ---
-        
-        // MODIFICADA: Acepta el texto del input O un texto directo de la voz.
-        window.searchProducts = function(voiceText = null) {
-            const filterText = voiceText !== null ? voiceText : searchInput.value;
-            
-            // Si el texto viene de la voz, actualizar la caja de texto con la transcripción.
-            if (voiceText !== null) {
-                searchInput.value = filterText;
-            }
-
-            // Bloqueo de voz si se borra el input manualmente
-            if (voiceText === null && filterText.trim().length === 0) {
-                if (synth && synth.speaking) {
-                    synth.cancel();
-                }
-            }
-            
-            renderProducts(filterText);
-        }
-        
         // Inicializar con datos de ejemplo
         function initializeApp() {
             // Intentar cargar datos guardados
@@ -1025,6 +1029,12 @@
                 products.push({ id: nextId++, name: 'Pasta Dental Kolinos', quantity: 1, price: 7.00 });
                 products.push({ id: nextId++, name: 'Cerveza Pilsen (Lata)', quantity: 1, price: 4.50 }); 
                 products.push({ id: nextId++, name: 'Cuzqueña en Lata Pequeña', quantity: 1, price: 5.00 }); // Producto de prueba para S/Z
+                products.push({ id: nextId++, name: 'Leche Gloria Abejita amarilla', quantity: 1, price: 2.10 });
+                products.push({ id: nextId++, name: 'Leche Gloria Amarilla', quantity: 1, price: 3.20 });
+                products.push({ id: nextId++, name: 'Leche Gloria Azul', quantity: 1, price: 3.50 });
+                products.push({ id: nextId++, name: 'Leche Gloria Grande', quantity: 1, price: 4.00 });
+                products.push({ id: nextId++, name: 'Leche Gloria Light Roja', quantity: 1, price: 3.80 });
+                products.push({ id: nextId++, name: 'Leche Gloria Sin Lactosa', quantity: 1, price: 4.20 });
                 products.push({ id: nextId++, name: 'Paquete Always Grande', quantity: 1, price: 12.00 }); 
                 products.push({ id: nextId++, name: 'Leche Pequeña Nestlé', quantity: 1, price: 2.50 }); 
 
@@ -1046,5 +1056,4 @@
     </script>
 </body>
 </html>
-
 
