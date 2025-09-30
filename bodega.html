@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -206,12 +207,13 @@
         ];
         
         // ** PALABRAS IGNORADAS PARA MEJORAR LA BÚSQUEDA **
+        // Se ignoran solo preposiciones y palabras de comando, NO las categorías de producto.
         const fillerWords = new Set([
             'a', 'ante', 'bajo', 'cabe', 'con', 'contra', 'de', 'del', 'desde', 'durante', 'en', 'entre',
             'hacia', 'hasta', 'mediante', 'para', 'por', 'según', 'sin', 'so', 'sobre', 'tras',
             'el', 'la', 'los', 'las', 'un', 'una', 'unos', 'unas', 'mi', 'su', 'es', 'está',
             'precio', 'precios', 'cuanto', 'como', 'esta', 'vale', 'costo', // Palabras de comando de precio
-            'cerveza', 'gaseosa', 'leche', 'pan', 'azucar', 'aceite', 'agua', 'saco', 'lata', 'botella', 'pequena', 'grande' // Categorías comunes
+            'pequena', 'grande' // Descriptores de tamaño
         ]);
 
         /**
@@ -250,6 +252,7 @@
             
             // 1. Coincidencia Fonética/Tipográfica (C/K, S/Z) - MEJORA CLAVE
             // Crea un patrón flexible para S, C, Z, K. Esto asegura que 'cusqueña' encuentre 'cuzqueña'.
+            // También se incluye la 'c' porque es un error común buscar 'k' en vez de 'c' (ej. 'kusqueña')
             let pattern = searchToken
                 .replace(/[csz]/g, '[csz]') 
                 .replace(/k/g, '[ck]');
@@ -819,11 +822,20 @@
 
             const normalizedFilter = normalizeText(trimmedFilterText);
             
-            // 3. Obtener tokens de búsqueda, ignorando las palabras de relleno
-            let searchTokens = normalizedFilter.split(/\s+/)
-                .filter(token => token.length > 0 && !fillerWords.has(token)); 
-
+            // 3. Obtener tokens de la búsqueda original.
+            let searchTokens = normalizedFilter.split(/\s+/).filter(token => token.length > 0);
             
+            // 4. Determinar si hay alguna palabra que NO sea de relleno
+            const hasSpecificTerms = searchTokens.some(token => !fillerWords.has(token));
+            
+            // 5. Si hay términos específicos, filtrar las palabras de relleno para la búsqueda final.
+            if (hasSpecificTerms) {
+                searchTokens = searchTokens.filter(token => !fillerWords.has(token));
+            }
+            // Si hasSpecificTerms es falso, searchTokens conservará las palabras genéricas (como 'cerveza')
+            // para permitir la búsqueda de categorías.
+
+
             let filteredProducts = products;
 
             if (searchTokens.length > 0) {
@@ -1034,3 +1046,5 @@
     </script>
 </body>
 </html>
+
+
