@@ -204,6 +204,15 @@
             "El inventario no contiene ese artículo. ¿Le puedo ayudar con otra cosa?",
             "Búsqueda fallida. Por favor, especifique mejor el producto.",
         ];
+        
+        // ** PALABRAS IGNORADAS PARA MEJORAR LA BÚSQUEDA **
+        const fillerWords = new Set([
+            'a', 'ante', 'bajo', 'cabe', 'con', 'contra', 'de', 'del', 'desde', 'durante', 'en', 'entre',
+            'hacia', 'hasta', 'mediante', 'para', 'por', 'según', 'sin', 'so', 'sobre', 'tras',
+            'el', 'la', 'los', 'las', 'un', 'una', 'unos', 'unas', 'mi', 'su', 'es', 'está',
+            'precio', 'precios', 'cuanto', 'como', 'esta', 'vale', 'costo', // Palabras de comando de precio
+            'cerveza', 'gaseosa', 'leche', 'pan', 'azucar', 'aceite', 'agua', 'saco', 'lata', 'botella', 'pequena', 'grande' // Categorías comunes
+        ]);
 
         /**
          * Selecciona una frase aleatoria de un array.
@@ -246,8 +255,8 @@
                 .replace(/k/g, '[ck]');
             
             // La expresión regular busca la coincidencia del token dentro del nombre normalizado.
-            // Utilizamos (\s|$).* para tolerar palabras adicionales al final (ej. "pequeña")
-            const regex = new RegExp(pattern, 'i'); 
+            // La palabra \b(pattern) asegura que la coincidencia sea al inicio de una palabra, lo cual mejora la precisión.
+            const regex = new RegExp('\\b' + pattern, 'i'); 
             
             if (regex.test(normalizedProductName)) {
                 return true;
@@ -777,7 +786,11 @@
             // ***********************************************************************************
 
             const normalizedFilter = normalizeText(trimmedFilterText);
-            const searchTokens = normalizedFilter.split(/\s+/).filter(token => token.length > 0); 
+            
+            // 3. Obtener tokens de búsqueda, ignorando las palabras de relleno
+            let searchTokens = normalizedFilter.split(/\s+/)
+                .filter(token => token.length > 0 && !fillerWords.has(token)); 
+
             
             let filteredProducts = products;
 
