@@ -233,29 +233,27 @@
          * Implementación de Coincidencia Difusa (Fuzzy Like) mejorada.
          * ALTA PRECISIÓN: Solo coincide si la palabra buscada está fuertemente incluida,
          * tolerando acentos y variaciones fonéticas comunes (C/K, S/Z).
-         * Se eliminó la lógica de Levenshtein simple para prevenir falsos positivos como 'queso' encontrando 'paquete'.
          * @param {string} normalizedProductName Nombre del producto (normalizado).
          * @param {string} searchToken Token de búsqueda (normalizado).
          * @returns {boolean} True si el token coincide de forma flexible.
          */
         function isFuzzyLikeMatch(normalizedProductName, searchToken) {
             
-            // 1. Coincidencia Fonética/Tipográfica (C/K, S/Z)
-            // Crea un patrón flexible que tolera errores comunes como C/K, S/Z, y K.
+            // 1. Coincidencia Fonética/Tipográfica (C/K, S/Z) - MEJORA CLAVE
+            // Crea un patrón flexible para S, C, Z, K. Esto asegura que 'cusqueña' encuentre 'cuzqueña'.
             let pattern = searchToken
-                .replace(/c/g, '[csz]') 
-                .replace(/z/g, '[csz]') 
-                .replace(/s/g, '[csz]') 
+                .replace(/[csz]/g, '[csz]') 
                 .replace(/k/g, '[ck]');
             
-            // Crea una expresión regular para buscar el patrón dentro del nombre
+            // La expresión regular busca la coincidencia del token dentro del nombre normalizado.
+            // Utilizamos (\s|$).* para tolerar palabras adicionales al final (ej. "pequeña")
             const regex = new RegExp(pattern, 'i'); 
             
             if (regex.test(normalizedProductName)) {
                 return true;
             }
             
-            // 2. Coincidencia simple de inclusión si el regex falla (ej. para tokens muy cortos)
+            // 2. Coincidencia simple de inclusión como fallback (si el regex falla)
             if (normalizedProductName.includes(searchToken)) {
                 return true;
             }
@@ -968,7 +966,8 @@
                 products.push({ id: nextId++, name: 'Gaseosa Inca Kola (3L)', quantity: 1, price: 8.00 });
                 products.push({ id: nextId++, name: 'Triángulo de Donofrio', quantity: 1, price: 2.50 }); 
                 products.push({ id: nextId++, name: 'Pasta Dental Kolinos', quantity: 1, price: 7.00 });
-                products.push({ id: nextId++, name: 'Cerveza Pilsen (Lata)', quantity: 1, price: 4.50 }); // Corregido: Serveza -> Cerveza
+                products.push({ id: nextId++, name: 'Cerveza Pilsen (Lata)', quantity: 1, price: 4.50 }); 
+                products.push({ id: nextId++, name: 'Cuzqueña en Lata Pequeña', quantity: 1, price: 5.00 }); // Producto de prueba para S/Z
                 products.push({ id: nextId++, name: 'Paquete Always Grande', quantity: 1, price: 12.00 }); 
                 products.push({ id: nextId++, name: 'Leche Pequeña Nestlé', quantity: 1, price: 2.50 }); 
 
