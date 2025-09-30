@@ -270,6 +270,38 @@
             return false;
         }
 
+        /**
+         * Formatea el precio decimal a un string de voz claro (ej: 3.50 -> "tres soles con cincuenta céntimos").
+         * @param {number} price El precio del producto.
+         * @returns {string} El string formateado para la voz.
+         */
+        function formatPriceForSpeech(price) {
+            if (isNaN(price)) return 'precio no disponible';
+            
+            // Redondear a dos decimales y separar partes
+            const priceString = price.toFixed(2);
+            const parts = priceString.split('.');
+            const soles = parseInt(parts[0], 10);
+            let centimos = parseInt(parts[1], 10);
+
+            // Asegurar que los céntimos sean dos dígitos (ej: 5 -> 50)
+            if (centimos < 10 && centimos > 0) {
+                centimos = centimos * 10;
+            } else if (centimos === 0) {
+                return `${soles} soles exactos`;
+            }
+
+            const solesText = soles === 1 ? 'sol' : 'soles';
+            const centimosText = centimos === 1 ? 'céntimo' : 'céntimos';
+
+            if (soles === 0) {
+                 return `${centimos} ${centimosText}`;
+            }
+
+            return `${soles} ${solesText} con ${centimos} ${centimosText}`;
+        }
+
+
         function displayTemporaryMessage(message, classes) {
             // Cancelar cualquier mensaje anterior antes de mostrar el nuevo
             voiceStatus.className = 'hidden'; 
@@ -598,8 +630,8 @@
                 const product = products.find(p => p.id === id);
                 if (!product) return;
 
-                const priceString = product.price.toFixed(2).replace('.', ' con '); 
-                const textToSpeak = `Producto: ${product.name}. Precio: ${priceString} soles.`; // Stock eliminado de la lectura
+                const priceString = formatPriceForSpeech(product.price); // Usar la nueva función
+                const textToSpeak = `Producto: ${product.name}. Precio: ${priceString}.`; 
                 
                 const utterance = new SpeechSynthesisUtterance(textToSpeak);
                 utterance.lang = 'es-ES'; 
@@ -637,10 +669,10 @@
                 }
 
                 list.forEach((product, index) => {
-                    const priceString = product.price.toFixed(2).replace('.', ' con ');
+                    const priceString = formatPriceForSpeech(product.price); // Usar la nueva función
                     // Agregar una pequeña pausa (coma) entre productos.
                     // Lectura simplificada: Nombre y Precio
-                    textToSpeak += `${index + 1}. ${product.name}. Precio ${priceString} soles. `; 
+                    textToSpeak += `${index + 1}. ${product.name}. Precio ${priceString}. `; 
                 });
                 
                 const utterance = new SpeechSynthesisUtterance(textToSpeak);
