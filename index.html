@@ -36,25 +36,27 @@
         :root {
             --color-bg: #f3f4f6;
             --color-card: #ffffff;
-            --color-text: #374151;
+            --color-text: #374151; /* Color de texto principal (oscuro por defecto) */
             --color-primary: #10b981;
             --color-primary-shadow: rgba(16, 185, 129, 0.7);
             --color-input-bg: #f9fafb;
-            --color-input-text: #1f2937;
+            --color-input-text: #1f2937; /* Color de texto en inputs (negro) */
             --color-placeholder: #6b7280;
             --color-table-header: #f9fafb;
+            --base-font-size: 14px; /* Default */
         }
 
         .dark-mode {
             --color-bg: #121212;
             --color-card: #1e1e1e;
-            --color-text: #f3f4f6;
+            --color-text: #f3f4f6; /* Texto principal debe ser CLARO */
             --color-primary: #64ffda;
             --color-primary-shadow: rgba(100, 255, 218, 0.7);
             --color-input-bg: #2d2d2d;
-            --color-input-text: #f3f4f6;
+            --color-input-text: #121212; /* NUEVO: Texto de inputs en negro para contraste */
+            --color-card-text-dark: #121212; /* Color negro específico para inputs en modo oscuro */
             --color-placeholder: #9ca3af;
-            --color-table-header: #2d2d2d;
+            --color-table-header: #2d2d2d; /* Fondo de encabezado oscuro */
         }
 
         body {
@@ -62,9 +64,34 @@
             background-color: var(--color-bg); 
             color: var(--color-text);
             transition: background-color 0.3s, color 0.3s;
-            font-size: var(--base-font-size, 14px); /* Usa variable para fuente */
+            font-size: var(--base-font-size); /* Usa la variable */
         }
 
+        /* APLICACIÓN CRÍTICA PARA EL TAMAÑO DE FUENTE: 
+           Usamos unidades relativas (rem) o herencia para que la fuente base tenga efecto.
+           Hemos quitado las clases de tamaño fijas de Tailwind y usamos CSS para el tamaño. */
+        .main-card label, .main-card button, .main-card input, .main-card select {
+            font-size: calc(var(--base-font-size) / 16 * 1rem); /* Base size */
+        }
+        .main-card h1 {
+            font-size: calc(var(--base-font-size) / 16 * 2.25rem); /* Proporcional a text-3xl */
+        }
+        .main-card h2 {
+            font-size: calc(var(--base-font-size) / 16 * 1.25rem); /* Proporcional a text-xl */
+        }
+        .main-card .text-xs {
+            font-size: calc(var(--base-font-size) / 16 * 0.75rem); /* Proporcional a text-xs */
+        }
+        .main-card .text-sm {
+            font-size: calc(var(--base-font-size) / 16 * 0.875rem); /* Proporcional a text-sm */
+        }
+        .main-card .text-lg {
+            font-size: calc(var(--base-font-size) / 16 * 1.125rem); /* Proporcional a text-lg */
+        }
+        .main-card .text-base {
+            font-size: calc(var(--base-font-size) / 16 * 1rem); /* Proporcional a text-base */
+        }
+        
         /* Aplicación de colores del tema a los elementos */
         .main-card {
             background-color: var(--color-card);
@@ -72,17 +99,49 @@
             border-top-color: var(--color-primary) !important;
             transition: background-color 0.3s, box-shadow 0.3s, color 0.3s;
         }
-        .text-emerald-700 { color: var(--color-text); }
-        .text-emerald-500 { color: var(--color-primary); }
-        .bg-gray-50 { background-color: var(--color-input-bg); }
-        .text-gray-800 { color: var(--color-input-text); }
-        .bg-gray-100 { background-color: var(--color-input-bg); }
-        .text-gray-600 { color: var(--color-placeholder); }
-        .bg-gray-50 thead { background-color: var(--color-table-header); }
+        
+        /* CORRECCIÓN DE CONTRASTE EN MODO OSCURO */
+        
+        /* Estilos generales para texto y títulos */
+        .main-card h1, .main-card h2, .main-card label, .main-card p, .main-card select { 
+            color: var(--color-text); 
+        }
+
+        /* Estilos específicos para inputs y celdas de tabla (nombres de productos) */
+        .main-card input[type="text"], 
+        .main-card input[type="number"], 
+        .main-card td.product-name-cell,
+        .main-card th {
+             /* En modo claro: texto oscuro */
+            color: var(--color-input-text);
+        }
+        
+        .dark-mode .main-card input[type="text"], 
+        .dark-mode .main-card input[type="number"], 
+        .dark-mode .main-card td.product-name-cell {
+            /* En modo oscuro: forzamos el texto a ser negro */
+            color: var(--color-card-text-dark) !important; 
+        }
+        
+        /* Aseguramos que el encabezado y el texto principal de la tabla usen el color del texto CLARO en modo oscuro */
+        .bg-gray-50 tbody th {
+             color: var(--color-text); 
+             background-color: var(--color-table-header);
+        }
+        
+        /* Estilos de la tabla y hover */
         .bg-white { background-color: var(--color-card); }
         .hover\:bg-gray-50:hover { background-color: var(--color-table-header); }
+        
+        /* Colores de texto en el menú de Engrane (Debe ser CLARO en modo oscuro) */
+        .settings-menu .text-gray-900, 
+        .settings-menu .text-gray-700 {
+            color: var(--color-text) !important;
+        }
 
-
+        /* FIN CORRECCIÓN DE CONTRASTE */
+        
+        /* Estilos de animaciones y otros */
         .container-main {
             min-height: 100vh;
         }
@@ -166,7 +225,8 @@
                     <label for="fontSizeSlider" class="block text-sm font-medium text-gray-700 mb-1">Tamaño de Fuente:</label>
                     <div class="flex items-center space-x-2">
                         <span class="text-sm">A</span>
-                        <input type="range" id="fontSizeSlider" min="10" max="18" value="14" step="1" class="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer range-lg">
+                        <!-- MAX AUMENTADO A 24 -->
+                        <input type="range" id="fontSizeSlider" min="10" max="24" value="14" step="1" class="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer range-lg">
                         <span class="text-lg">A</span>
                     </div>
                 </div>
@@ -226,16 +286,16 @@
             
             <!-- Botón Agregar por Voz (Guardado Automático) -->
             <button id="startAddButton" class="w-full sm:w-1/2 flex items-center justify-center px-6 py-3 border border-transparent text-base font-medium rounded-full shadow-lg text-white bg-emerald-600 hover:bg-emerald-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-emerald-500 transition duration-150 ease-in-out">
-                <!-- Icono Modificado: Lista con signo de suma -->
-                <svg class="w-6 h-6 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-3-3v6M4 6h16a2 2 0 012 2v8a2 2 0 01-2 2H4a2 2 0 01-2-2V8a2 2 0 012-2zm0 0l2 2m-2-2l2-2"></path></svg>
-                <span id="startAddButtonText">Agregar productos por voz</span>
+                <!-- ÍCONO DE CRUZ (╋) EN UN SPAN PARA MANEJAR EL TAMAÑO DE FUENTE -->
+                <span class="mr-2 text-xl">╋</span>
+                <span id="startAddButtonText" class="text-base">Agregar productos por voz</span>
             </button>
 
             <!-- Botón Buscar por Voz y TTS -->
             <button id="startSearchButton" class="w-full sm:w-1/2 flex items-center justify-center px-6 py-3 border border-transparent text-base font-medium rounded-full shadow-lg text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition duration-150 ease-in-out">
-                <!-- Icono de Búsqueda con Micrófono -->
-                <svg class="w-6 h-6 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0zM12 18v-4m0-4V8m0 4l2 2m-4 0l2-2"/></svg>
-                <span id="startSearchButtonText">Buscar producto por voz</span>
+                <!-- ÍCONO DE MICRÓFONO (🎙️) EN UN SPAN PARA MANEJAR EL TAMAÑO DE FUENTE -->
+                <span class="mr-2 text-xl">🎙️</span>
+                <span id="startSearchButtonText" class="text-base">Buscar producto por voz</span>
             </button>
         </section>
 
@@ -391,7 +451,7 @@
                 themeToggle.querySelector('span').classList.add('translate-x-1');
             }
 
-            // 2. Fuente (Corregido)
+            // 2. Fuente (Corregido: Usando la variable CSS)
             root.style.setProperty('--base-font-size', `${currentSettings.fontSize}px`);
             fontSizeSlider.value = currentSettings.fontSize;
         };
@@ -699,7 +759,7 @@
             productsTableBody.innerHTML = '';
             
             if (currentProductsData.length === 0) {
-                productsTableBody.innerHTML = '<tr><td colspan="3" class="text-center py-4 text-gray-500">No hay productos guardados.</td></tr>';
+                productsTableBody.innerHTML = '<tr><td colspan="3" class="text-center py-4 text-gray-500 text-sm">No hay productos guardados.</td></tr>';
                 return;
             }
 
@@ -714,14 +774,14 @@
                 row.setAttribute('data-doc-id', id);
 
                 row.innerHTML = `
-                        <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">${data.productName}</td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm font-medium product-name-cell">${data.productName}</td>
                         <td class="px-6 py-4 whitespace-nowrap text-sm text-right font-bold text-green-700">S/. ${priceDisplay}</td>
                         <td class="px-6 py-4 whitespace-nowrap text-center text-sm font-medium">
-                            <button data-action="edit" data-id="${id}" class="text-purple-600 hover:text-purple-900 mr-2 px-2 py-1 rounded-md bg-purple-100 transition duration-150">
+                            <button data-action="edit" data-id="${id}" class="text-purple-600 hover:text-purple-900 mr-2 px-2 py-1 rounded-md bg-purple-100 transition duration-150 text-xs">
                                 Modificar
                             </button>
                             <!-- BOTÓN RENOMBRADO A BORRAR -->
-                            <button data-action="delete" data-id="${id}" data-name="${data.productName}" class="text-red-600 hover:text-red-900 px-2 py-1 rounded-md bg-red-100 transition duration-150">
+                            <button data-action="delete" data-id="${id}" data-name="${data.productName}" class="text-red-600 hover:text-red-900 px-2 py-1 rounded-md bg-red-100 transition duration-150 text-xs">
                                 Borrar
                             </button>
                         </td>
@@ -1155,6 +1215,26 @@
             }
         });
 
+        // --- CORRECCIÓN CRÍTICA DEL BOTÓN DE ENGRANE ---
+
+        // Abrir/Cerrar el menú
+        settingsButton.addEventListener('click', (e) => {
+            e.stopPropagation(); // Evita que el clic se propague al documento y lo cierre inmediatamente
+            settingsMenu.classList.toggle('open');
+        });
+
+        // Cierra el menú si se hace clic fuera
+        document.addEventListener('click', (e) => {
+            // Aseguramos que el menú se cierre si no se hizo clic en el botón ni en el menú mismo.
+            const isClickInsideMenu = settingsMenu.contains(e.target);
+            const isClickOnButton = settingsButton.contains(e.target);
+            
+            if (settingsMenu.classList.contains('open') && !isClickInsideMenu && !isClickOnButton) {
+                // No llamamos a recognition.stop() aquí, ya que interferiría con el proceso normal de voz.
+                settingsMenu.classList.remove('open');
+            }
+        });
+        
         // Inicializar la aplicación
         document.addEventListener('DOMContentLoaded', () => {
              loadSettings();
