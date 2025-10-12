@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Gestión Móvil de Inventario por Voz (Local)</title>
+    <title>TIENDAS ZHEGOO 2025 - Inventario Local</title>
     <!-- Incluye Tailwind CSS para un diseño moderno y responsive -->
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
@@ -33,20 +33,58 @@
     </script>
     <style>
         /* Estilos base para los temas */
+        :root {
+            --color-bg: #f3f4f6;
+            --color-card: #ffffff;
+            --color-text: #374151;
+            --color-primary: #10b981;
+            --color-primary-shadow: rgba(16, 185, 129, 0.7);
+            --color-input-bg: #f9fafb;
+            --color-input-text: #1f2937;
+            --color-placeholder: #6b7280;
+            --color-table-header: #f9fafb;
+        }
+
+        .dark-mode {
+            --color-bg: #121212;
+            --color-card: #1e1e1e;
+            --color-text: #f3f4f6;
+            --color-primary: #64ffda;
+            --color-primary-shadow: rgba(100, 255, 218, 0.7);
+            --color-input-bg: #2d2d2d;
+            --color-input-text: #f3f4f6;
+            --color-placeholder: #9ca3af;
+            --color-table-header: #2d2d2d;
+        }
+
         body {
             font-family: 'Inter', sans-serif;
-            background-color: var(--color-bg, #f3f4f6); 
-            color: var(--color-text, #374151);
+            background-color: var(--color-bg); 
+            color: var(--color-text);
             transition: background-color 0.3s, color 0.3s;
+            font-size: var(--base-font-size, 14px); /* Usa variable para fuente */
         }
+
+        /* Aplicación de colores del tema a los elementos */
+        .main-card {
+            background-color: var(--color-card);
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+            border-top-color: var(--color-primary) !important;
+            transition: background-color 0.3s, box-shadow 0.3s, color 0.3s;
+        }
+        .text-emerald-700 { color: var(--color-text); }
+        .text-emerald-500 { color: var(--color-primary); }
+        .bg-gray-50 { background-color: var(--color-input-bg); }
+        .text-gray-800 { color: var(--color-input-text); }
+        .bg-gray-100 { background-color: var(--color-input-bg); }
+        .text-gray-600 { color: var(--color-placeholder); }
+        .bg-gray-50 thead { background-color: var(--color-table-header); }
+        .bg-white { background-color: var(--color-card); }
+        .hover\:bg-gray-50:hover { background-color: var(--color-table-header); }
+
+
         .container-main {
             min-height: 100vh;
-        }
-        .main-card {
-            background-color: var(--color-card, #ffffff);
-            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
-            border-top-color: var(--color-primary, #10b981) !important;
-            transition: background-color 0.3s, box-shadow 0.3s;
         }
         .listening-animation {
             animation: pulse-ring 1s cubic-bezier(0.4, 0, 0.6, 1) infinite;
@@ -54,7 +92,7 @@
         @keyframes pulse-ring {
             0%, 100% {
                 transform: scale(1);
-                box-shadow: 0 0 0 0 var(--color-primary-shadow, rgba(16, 185, 129, 0.7)); 
+                box-shadow: 0 0 0 0 var(--color-primary-shadow); 
             }
             50% {
                 transform: scale(1.05);
@@ -64,13 +102,6 @@
         .listening-dot {
             animation: bounce 1s infinite;
         }
-        @keyframes bounce {
-            0%, 100% { transform: translateY(-25%); animation-timing-function: cubic-bezier(0.8, 0, 1, 1); }
-            50% { transform: translateY(0); animation-timing-function: cubic-bezier(0, 0, 0.2, 1); }
-        }
-        .tts-active {
-            filter: brightness(1.2);
-        }
         /* Estilos del menú flotante de engrane */
         .settings-menu {
             transition: all 0.3s ease-out;
@@ -78,6 +109,7 @@
             opacity: 0;
             transform-origin: top right;
             visibility: hidden;
+            background-color: var(--color-card); /* Asegurar el fondo del menú */
         }
         .settings-menu.open {
             transform: scale(1);
@@ -113,7 +145,7 @@
         </button>
 
         <!-- Menú Desplegable -->
-        <div id="settingsMenu" class="settings-menu absolute right-0 mt-2 w-64 rounded-md shadow-2xl bg-white ring-1 ring-black ring-opacity-5 divide-y divide-gray-100">
+        <div id="settingsMenu" class="settings-menu absolute right-0 mt-2 w-64 rounded-md shadow-2xl ring-1 ring-black ring-opacity-5 divide-y divide-gray-100">
             <div class="px-4 py-3">
                 <p class="text-sm font-medium text-gray-900">Opciones</p>
             </div>
@@ -143,12 +175,34 @@
             
             <div class="p-2 space-y-2">
                 <p class="text-xs font-semibold text-gray-700 px-2 pt-1">DATOS Y BACKUP</p>
+                
+                <!-- Copia de Seguridad Programada -->
+                <div class="px-2">
+                    <label for="backupInterval" class="block text-sm font-medium text-gray-700 mb-1">Programar Copia de Seguridad:</label>
+                    <select id="backupInterval" class="w-full p-2 border border-gray-300 rounded-md text-sm">
+                        <option value="manual">Manual (Ahora)</option>
+                        <option value="daily">Cada 24 horas</option>
+                        <option value="3days">Cada 3 días</option>
+                        <option value="5days">Cada 5 días</option>
+                        <option value="monthly">Mensualmente</option>
+                    </select>
+                </div>
+
+                <!-- Lista de Backups Guardados -->
+                <div class="px-2 pt-2">
+                    <p class="text-xs font-medium text-gray-700 mb-1">Backups guardados:</p>
+                    <ul id="backupList" class="max-h-24 overflow-y-auto border border-gray-200 rounded-md p-1 space-y-1">
+                        <!-- Se llenará con JS -->
+                        <li class="text-xs text-gray-500 text-center">No hay backups.</li>
+                    </ul>
+                </div>
+
                 <label for="csvFileInput" class="block text-xs font-medium text-gray-700 mb-1 px-2">Carga Masiva (CSV)</label>
                 <input type="file" id="csvFileInput" accept=".csv" class="text-xs w-full mb-2 p-1 border border-gray-300 rounded-md">
                 
                 <button id="backupButton" class="w-full flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-yellow-50 hover:text-yellow-700 transition duration-150 rounded-md">
                     <svg class="w-5 h-5 mr-2 text-yellow-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
-                    Copia de Seguridad (CSV)
+                    Generar Copia de Seguridad
                 </button>
             </div>
         </div>
@@ -159,11 +213,11 @@
         
         <!-- Título principal simplificado -->
         <header class="mb-6 border-b pb-4">
-            <h1 class="text-2xl sm:text-3xl font-extrabold text-emerald-700 flex items-center justify-center text-center">
-                <svg class="w-7 h-7 sm:w-8 sm:h-8 mr-2 text-emerald-500" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg"><path d="M5 3a2 2 0 00-2 2v2a2 2 0 002 2h2a2 2 0 002-2V5a2 2 0 00-2-2H5zM5 11a2 2 0 00-2 2v2a2 2 0 002 2h2a2 2 0 002-2v-2a2 2 0 00-2-2H5zM11 5a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V5zM11 13a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"></path></svg>
-                INVENTARIO POR VOZ
+            <h1 class="text-2xl sm:text-3xl font-extrabold flex items-center justify-center text-center">
+                <!-- Icono de Tienda -->
+                <svg class="w-7 h-7 sm:w-8 sm:h-8 mr-2" fill="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M20 7H4V4a2 2 0 012-2h12a2 2 0 012 2v3zm0 3v10a2 2 0 01-2 2H6a2 2 0 01-2-2V10h16zm-9 6a1 1 0 100-2 1 1 0 000 2z"/></svg>
+                TIENDAS ZHEGOO 2025
             </h1>
-            <!-- Se elimina el texto de Almacenamiento Local -->
             <p id="db-status" class="hidden"></p>
         </header>
 
@@ -179,7 +233,8 @@
 
             <!-- Botón Buscar por Voz y TTS -->
             <button id="startSearchButton" class="w-full sm:w-1/2 flex items-center justify-center px-6 py-3 border border-transparent text-base font-medium rounded-full shadow-lg text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition duration-150 ease-in-out">
-                <svg class="w-6 h-6 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+                <!-- Icono de Búsqueda con Micrófono -->
+                <svg class="w-6 h-6 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0zM12 18v-4m0-4V8m0 4l2 2m-4 0l2-2"/></svg>
                 <span id="startSearchButtonText">Buscar producto por voz</span>
             </button>
         </section>
@@ -187,16 +242,14 @@
         <!-- Divs de Entrada y Estado (Visibles para Voice y Manual) -->
         <section class="grid md:grid-cols-3 gap-4 mb-6">
             <div class="md:col-span-2 space-y-4">
-                <!-- Se elimina "Formulario Manual / Resultado de Voz" -->
-                <h2 class="text-xl font-bold text-gray-700 hidden">Formulario Manual / Resultado de Voz</h2>
                 <input type="hidden" id="docIdInput" value="">
                 
                 <!-- Campo de Producto y Búsqueda Manual -->
                 <div class="relative">
-                    <label for="productNameInput" class="block text-sm font-medium text-gray-700 mb-1">Producto / Búsqueda:</label>
+                    <label for="productNameInput" class="block text-sm font-medium mb-1">Producto / Búsqueda:</label>
                     <input type="text" id="productNameInput" placeholder="Nombre (Escribir o usar Voz)" 
-                           class="w-full p-3 text-lg text-gray-800 bg-gray-50 border-2 border-gray-300 rounded-lg focus:ring-emerald-500 focus:border-emerald-500 transition duration-150">
-                    <!-- Botón de Búsqueda Manual (Opcional, activa al escribir) -->
+                           class="w-full p-3 text-lg bg-gray-50 border-2 border-gray-300 rounded-lg focus:ring-emerald-500 focus:border-emerald-500 transition duration-150">
+                    <!-- Botón de Búsqueda Manual -->
                     <button id="manualSearchButton" class="absolute right-0 top-7 mt-1 mr-1 p-2 bg-blue-500 text-white rounded-r-lg hover:bg-blue-600 transition duration-150">
                         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
                     </button>
@@ -204,9 +257,9 @@
 
                 <!-- Campo de Precio -->
                 <div>
-                    <label for="priceInput" class="block text-sm font-medium text-gray-700 mb-1">Costo (S/.):</label>
+                    <label for="priceInput" class="block text-sm font-medium mb-1">Costo (S/.):</label>
                     <input type="number" step="0.01" id="priceInput" placeholder="0.00" 
-                           class="w-full p-3 text-lg text-center font-mono text-gray-800 bg-gray-50 border-2 border-gray-300 rounded-lg focus:ring-emerald-500 focus:border-emerald-500 transition duration-150">
+                           class="w-full p-3 text-lg text-center font-mono bg-gray-50 border-2 border-gray-300 rounded-lg focus:ring-emerald-500 focus:border-emerald-500 transition duration-150">
                 </div>
             </div>
             
@@ -229,7 +282,7 @@
         <!-- Sección de Tabla de Productos -->
         <section class="mt-8">
             <div class="flex justify-between items-center mb-4">
-                <h2 class="text-xl font-bold text-gray-700">Lista de Artículos Guardados</h2>
+                <h2 class="text-xl font-bold">Lista de Artículos Guardados</h2>
                 <button id="clearFilterButton" class="px-3 py-1 text-sm bg-yellow-500 text-white rounded-md shadow-md hover:bg-yellow-600 transition duration-150 hidden">
                     Mostrar Todos (Filtro Activo)
                 </button>
@@ -238,9 +291,9 @@
                 <table class="min-w-full divide-y divide-gray-200">
                     <thead class="bg-gray-50">
                         <tr>
-                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Producto</th>
-                            <th scope="col" class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Costo (S/.)</th>
-                            <th scope="col" class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Acciones</th>
+                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider">Producto</th>
+                            <th scope="col" class="px-6 py-3 text-right text-xs font-medium uppercase tracking-wider">Costo (S/.)</th>
+                            <th scope="col" class="px-6 py-3 text-center text-xs font-medium uppercase tracking-wider">Acciones</th>
                         </tr>
                     </thead>
                     <tbody id="productsTableBody" class="bg-white divide-y divide-gray-200">
@@ -271,20 +324,25 @@
         const productsTableBody = document.getElementById('productsTableBody');
         const clearFilterButton = document.getElementById('clearFilterButton'); 
         const manualSearchButton = document.getElementById('manualSearchButton'); 
-        const themeToggle = document.getElementById('themeToggle'); // Nuevo: Toggle Tema
-        const fontSizeSlider = document.getElementById('fontSizeSlider'); // Nuevo: Slider Fuente
+        const themeToggle = document.getElementById('themeToggle'); 
+        const fontSizeSlider = document.getElementById('fontSizeSlider'); 
+        const backupIntervalSelect = document.getElementById('backupInterval'); // Nuevo select
+        const backupList = document.getElementById('backupList'); // Nueva lista
 
         // Configuración de la Web Speech API
         const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
         const SpeechSynthesis = window.speechSynthesis;
         const LOCAL_STORAGE_KEY = 'voice_inventory_products';
-        const SETTINGS_KEY = 'app_settings'; // Nuevo: Clave para ajustes de accesibilidad
+        const SETTINGS_KEY = 'app_settings'; 
+        const BACKUP_LOG_KEY = 'backup_log'; // Nueva clave para log de backups
 
         let currentMode = 'add';
         let isRecognizing = false;
         let recognition = null;
         let currentProductsData = []; 
-        let currentSettings = { theme: 'light', fontSize: 14 }; // Nuevo: Estado inicial de ajustes
+        let currentSettings = { theme: 'light', fontSize: 14 }; 
+        let backupTimer = null; // Para control de programación
+        let backupLog = [];
 
         if (!SpeechRecognition) {
             statusDiv.innerHTML = '<p class="text-red-600 font-bold">❌ API de Voz no soportada. Usa Chrome o Edge.</p>';
@@ -297,7 +355,7 @@
             recognition.interimResults = false;
         }
 
-        // --- FUNCIONES DE ACCESIBILIDAD (NUEVO) ---
+        // --- FUNCIONES DE ACCESIBILIDAD ---
 
         const loadSettings = () => {
             const storedSettings = localStorage.getItem(SETTINGS_KEY);
@@ -314,29 +372,18 @@
 
         const applySettings = () => {
             const body = document.body;
+            const root = document.documentElement; // Usamos :root para variables CSS
             
             // 1. Tema
             if (currentSettings.theme === 'dark') {
-                body.style.setProperty('--color-bg', tailwind.config.theme.extend.colors.dark.bg);
-                body.style.setProperty('--color-card', tailwind.config.theme.extend.colors.dark.card);
-                body.style.setProperty('--color-text', tailwind.config.theme.extend.colors.dark.text);
-                body.style.setProperty('--color-primary', tailwind.config.theme.extend.colors.dark.primary);
-                body.style.setProperty('--color-primary-shadow', 'rgba(100, 255, 218, 0.7)');
-                
-                // Actualizar toggle visual
+                root.classList.add('dark-mode');
                 themeToggle.setAttribute('data-checked', 'true');
                 themeToggle.classList.remove('bg-gray-200');
                 themeToggle.classList.add('bg-blue-600');
                 themeToggle.querySelector('span').classList.add('translate-x-5');
                 themeToggle.querySelector('span').classList.remove('translate-x-1');
             } else {
-                body.style.setProperty('--color-bg', '#f3f4f6');
-                body.style.setProperty('--color-card', '#ffffff');
-                body.style.setProperty('--color-text', '#374151');
-                body.style.setProperty('--color-primary', '#10b981');
-                body.style.setProperty('--color-primary-shadow', 'rgba(16, 185, 129, 0.7)');
-
-                // Actualizar toggle visual
+                root.classList.remove('dark-mode');
                 themeToggle.setAttribute('data-checked', 'false');
                 themeToggle.classList.remove('bg-blue-600');
                 themeToggle.classList.add('bg-gray-200');
@@ -344,8 +391,8 @@
                 themeToggle.querySelector('span').classList.add('translate-x-1');
             }
 
-            // 2. Fuente
-            body.style.fontSize = `${currentSettings.fontSize}px`;
+            // 2. Fuente (Corregido)
+            root.style.setProperty('--base-font-size', `${currentSettings.fontSize}px`);
             fontSizeSlider.value = currentSettings.fontSize;
         };
         
@@ -361,8 +408,6 @@
             currentSettings.fontSize = parseInt(e.target.value);
             saveSettings();
         });
-
-        // --- FIN FUNCIONES DE ACCESIBILIDAD ---
 
 
         // --- FUNCIÓN DE UTILIDAD DE CONVERSIÓN DE VOZ ---
@@ -381,6 +426,7 @@
         };
 
         const wordsToNumber = (text) => {
+            // ... (Lógica de wordsToNumber sin cambios, ya es correcta) ...
             const convert = (numStr) => {
                 let total = 0;
                 const parts = numStr.split(' ');
@@ -436,6 +482,7 @@
         };
 
         const parseProductAndPrice = (transcript) => {
+            // ... (Lógica de parseProductAndPrice sin cambios) ...
             let lowerTranscript = transcript.trim().toLowerCase();
             let product = transcript.trim();
             let price = null;
@@ -489,29 +536,93 @@
 
             return { product: product, price: price };
         };
-
-        // --- FUNCIONES DE ALMACENAMIENTO LOCAL (CRUD) ---
-
+        
+        // --- FUNCIÓN DE BÚSQUEDA INTELIGENTE (FILTRO FUZZY) ---
+        
         /**
-         * Carga los datos de localStorage. Si no existen, inicializa con productos simulados.
+         * Limpia y normaliza el texto para la búsqueda (maneja V/B, espacios, K/C, etc.)
+         * @param {string} text 
          */
+        const normalizeText = (text) => {
+            if (!text) return '';
+            let normalized = text.toLowerCase().trim();
+            
+            // 1. Manejo de B/V y otros errores fonéticos comunes en español
+            normalized = normalized.replace(/v/g, 'b'); 
+            normalized = normalized.replace(/c/g, 'k'); // K/C para incakola vs inkakola
+            normalized = normalized.replace(/s\s*$/g, ''); // Quitar 's' final (plural)
+            
+            // 2. Simplificar nombres compuestos/sin espacio (prestobarba vs presto barba)
+            normalized = normalized.replace(/\s+/g, ''); // Quita todos los espacios
+            
+            return normalized;
+        };
+
+        const performSearch = (queryText) => {
+             
+            let cleanQuery = queryText.trim().replace(/^[.,:;!?\s]+|[.,:;!?\s]+$/g, '');
+            productNameInput.value = cleanQuery; // Mostrar el texto de la búsqueda (Req. 4)
+
+            const normalizedQuery = normalizeText(cleanQuery);
+
+            if (normalizedQuery.length === 0) {
+                 clearTableFilter();
+                 return;
+            }
+
+            statusDiv.innerHTML = `<p class="text-blue-600 font-bold">🔎 Buscando "${cleanQuery}" (búsqueda parcial)...</p>`;
+
+            // 1. Filtrar localmente usando normalización (Filtro Fuzzy)
+            const filteredProducts = currentProductsData.filter(p => {
+                const normalizedProductName = normalizeText(p.productName);
+                
+                // Criterios de coincidencia más flexible:
+                // a) Coincidencia directa de la palabra normalizada (ej: 'aceite' incluye 'aceit')
+                // b) Coincidencia de la palabra normalizada sin espacios (ej: 'prestobarba' incluye 'presto barba')
+                
+                const matchFound = normalizedProductName.includes(normalizedQuery);
+                
+                return matchFound;
+            });
+
+            // 2. Filtrar el DOM (resto del código sin cambios)
+            const allRows = productsTableBody.querySelectorAll('tr[data-doc-id]');
+            let matchCount = 0;
+            
+            allRows.forEach(row => {
+                const productId = row.getAttribute('data-doc-id');
+                const isMatch = filteredProducts.some(p => p.id === productId);
+
+                if (isMatch) {
+                    row.classList.remove('filtered-out');
+                    matchCount++;
+                } else {
+                    row.classList.add('filtered-out');
+                }
+            });
+
+            // 3. Mostrar botón para limpiar filtro
+            clearFilterButton.classList.remove('hidden');
+            
+            return filteredProducts;
+        }
+
+        // --- FUNCIONES DE ALMACENAMIENTO LOCAL (CRUD y SEED) ---
         const loadProducts = () => {
+            // ... (Lógica de loadProducts sin cambios) ...
             const storedData = localStorage.getItem(LOCAL_STORAGE_KEY);
             if (!storedData) {
                 return seedDatabase(); // Si no hay datos, sembramos
             }
             try {
-                // Parseamos los datos y los ordenamos por timestamp (simulado, si existe) o por nombre
                 let products = JSON.parse(storedData);
                 
-                // Asegurar que los productos tengan ID y timestamp (simulado) si faltan
                 products = products.map(p => ({
                     ...p,
                     id: p.id || crypto.randomUUID(),
                     timestamp: p.timestamp || Date.now()
                 }));
 
-                // Ordenar por timestamp descendente
                 products.sort((a, b) => b.timestamp - a.timestamp);
                 return products;
             } catch (e) {
@@ -520,17 +631,11 @@
             }
         };
 
-        /**
-         * Guarda el array de productos en localStorage.
-         */
         const saveProducts = (products) => {
             localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(products));
             return products;
         };
 
-        /**
-         * Inicializa la base de datos con productos simulados.
-         */
         const productsToSeed = [
             'Leche entera', 'Pan de molde', 'Huevos (docena)', 'Azúcar blanca', 'Aceite vegetal',
             'Arroz blanco', 'Fideos spaghetti', 'Atún enlatado', 'Sal de mesa', 'Café molido',
@@ -543,17 +648,15 @@
             'Galletas soda', 'Chocolate en barra', 'Miel de abeja', 'Frijoles canario', 'Lentejas',
             'Maíz chancha', 'Palta (unidad)', 'Limones', 'Cilantro', 'Avena en bolsa'
         ];
-
         const generateRandomPrice = (min, max) => (Math.random() * (max - min) + min).toFixed(2);
-
         const seedDatabase = () => {
             const products = [];
             for (let i = 0; i < productsToSeed.length; i++) {
                 products.push({
-                    id: crypto.randomUUID(), // Generar ID único
+                    id: crypto.randomUUID(), 
                     productName: productsToSeed[i],
                     price: parseFloat(generateRandomPrice(2.5, 35.0)),
-                    timestamp: Date.now() - i * 1000 // Simular orden descendente
+                    timestamp: Date.now() - i * 1000 
                 });
             }
             statusDiv.innerHTML = '<p class="text-green-600 font-bold">Base de datos local inicializada con 50 productos.</p>';
@@ -611,7 +714,7 @@
                 row.setAttribute('data-doc-id', id);
 
                 row.innerHTML = `
-                        <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">${data.productName}</td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">${data.productName}</td>
                         <td class="px-6 py-4 whitespace-nowrap text-sm text-right font-bold text-green-700">S/. ${priceDisplay}</td>
                         <td class="px-6 py-4 whitespace-nowrap text-center text-sm font-medium">
                             <button data-action="edit" data-id="${id}" class="text-purple-600 hover:text-purple-900 mr-2 px-2 py-1 rounded-md bg-purple-100 transition duration-150">
@@ -637,7 +740,6 @@
                 button.addEventListener('click', () => {
                     const id = button.getAttribute('data-id');
                     const name = button.getAttribute('data-name');
-                    // Llamar a la función principal de eliminación
                     deleteProduct(id, name);
                 });
             });
@@ -650,6 +752,7 @@
          * Guarda un nuevo producto (desde voz).
          */
         const saveProductFromVoice = (product, price) => {
+            // ... (Lógica sin cambios) ...
             if (!product || isNaN(parseFloat(price))) return;
 
             const finalPrice = parseFloat(price);
@@ -677,9 +780,58 @@
         };
 
         /**
-         * Guarda o modifica un producto (desde formulario manual).
+         * Carga el producto seleccionado en el formulario para su edición.
          */
-        const manualSaveProduct = () => {
+        const editProduct = (id) => {
+            const product = currentProductsData.find(p => p.id === id);
+
+            if (product) {
+                docIdInput.value = id;
+                productNameInput.value = product.productName;
+                priceInput.value = parseFloat(product.price).toFixed(2);
+                statusDiv.innerHTML = `<p class="text-purple-600 font-bold">📝 Editando: ${product.productName}. Presiona Guardar / Modificar Manual.</p>`;
+                settingsMenu.classList.remove('open');
+            }
+        };
+
+        /**
+         * Elimina un producto.
+         */
+        const deleteProduct = (id, name) => {
+            // Confirmación del usuario 
+            if (!window.confirm(`¿Estás seguro de que quieres borrar permanentemente el producto "${name}"?`)) {
+                return;
+            }
+            
+            // Filtrar el producto de la lista actual
+            const updatedProducts = currentProductsData.filter(p => p.id !== id);
+            
+            // Guardar la nueva lista en localStorage
+            saveProducts(updatedProducts);
+            
+            // Re-renderizar la tabla para reflejar el cambio
+            renderProductsTable();
+            
+            statusDiv.innerHTML = `<p class="text-red-600 font-bold">🗑️ Producto "${name}" borrado exitosamente.</p>`;
+            clearForm();
+        };
+
+        // Exportar funciones CRUD para botones de tabla
+        window.editProduct = editProduct;
+        window.deleteProduct = deleteProduct;
+
+
+        // Limpiar el formulario de edición
+        const clearForm = () => {
+            docIdInput.value = '';
+            productNameInput.value = '';
+            priceInput.value = '';
+            statusDiv.innerHTML = '';
+            clearTableFilter();
+        };
+        
+        // Asignar evento al botón de Guardado/Modificación Manual
+        document.getElementById('manualSaveButton').addEventListener('click', () => {
             const product = productNameInput.value.trim();
             const price = parseFloat(priceInput.value);
             const docId = docIdInput.value;
@@ -714,106 +866,12 @@
             saveProducts(updatedProducts);
             renderProductsTable();
             clearForm();
-        };
+        });
 
-        /**
-         * Carga el producto seleccionado en el formulario para su edición.
-         */
-        const editProduct = (id) => {
-            const product = currentProductsData.find(p => p.id === id);
-
-            if (product) {
-                docIdInput.value = id;
-                productNameInput.value = product.productName;
-                priceInput.value = parseFloat(product.price).toFixed(2);
-                statusDiv.innerHTML = `<p class="text-purple-600 font-bold">📝 Editando: ${product.productName}. Presiona Guardar / Modificar Manual.</p>`;
-                settingsMenu.classList.remove('open');
-            }
-        };
-
-        /**
-         * Elimina un producto.
-         */
-        const deleteProduct = (id, name) => {
-            // Confirmación del usuario (usando window.confirm para simplificar la UI)
-            // NOTA: window.confirm se mantiene por simplicidad en este entorno.
-            if (!window.confirm(`¿Estás seguro de que quieres borrar permanentemente el producto "${name}"?`)) {
-                return;
-            }
-            
-            // Filtrar el producto de la lista actual
-            const updatedProducts = currentProductsData.filter(p => p.id !== id);
-            
-            // Guardar la nueva lista en localStorage
-            saveProducts(updatedProducts);
-            
-            // Re-renderizar la tabla para reflejar el cambio
-            renderProductsTable();
-            
-            statusDiv.innerHTML = `<p class="text-red-600 font-bold">🗑️ Producto "${name}" borrado exitosamente.</p>`;
-            clearForm();
-        };
-
-        // Exportar funciones CRUD para botones de tabla
-        window.editProduct = editProduct;
-        window.deleteProduct = deleteProduct;
-
-
-        // Limpiar el formulario de edición
-        const clearForm = () => {
-            docIdInput.value = '';
-            productNameInput.value = '';
-            priceInput.value = '';
-            statusDiv.innerHTML = '';
-            clearTableFilter();
-        };
-        
-        // Asignar evento al botón de Guardado/Modificación Manual
-        manualSaveButton.addEventListener('click', manualSaveProduct);
-        clearFormButton.addEventListener('click', clearForm);
+        document.getElementById('clearFormButton').addEventListener('click', clearForm);
 
 
         // --- FUNCIONES DE BÚSQUEDA Y LECTURA (TTS) ---
-
-        const performSearch = (queryText) => {
-             
-            let cleanQuery = queryText.trim().replace(/^[.,:;!?\s]+|[.,:;!?\s]+$/g, '');
-            const lowerQuery = cleanQuery.toLowerCase();
-
-            // Solo filtramos si la consulta no está vacía.
-            if (lowerQuery.length === 0) {
-                 clearTableFilter();
-                 return;
-            }
-
-            statusDiv.innerHTML = `<p class="text-blue-600 font-bold">🔎 Buscando "${cleanQuery}" (búsqueda parcial)...</p>`;
-
-            // 1. Filtrar localmente (simulando LIKE %texto%)
-            const filteredProducts = currentProductsData.filter(p => 
-                p.productName.toLowerCase().includes(lowerQuery)
-            );
-
-            // 2. Filtrar el DOM
-            const allRows = productsTableBody.querySelectorAll('tr[data-doc-id]');
-            let matchCount = 0;
-            
-            allRows.forEach(row => {
-                const productId = row.getAttribute('data-doc-id');
-                const isMatch = filteredProducts.some(p => p.id === productId);
-
-                if (isMatch) {
-                    row.classList.remove('filtered-out');
-                    matchCount++;
-                } else {
-                    row.classList.add('filtered-out');
-                }
-            });
-
-            // 3. Mostrar botón para limpiar filtro
-            clearFilterButton.classList.remove('hidden');
-            
-            return filteredProducts;
-        }
 
         const performSearchAndRead = (queryText) => {
             
@@ -867,66 +925,56 @@
         });
 
 
-        // --- FUNCIONES DE CARGA MASIVA Y BACKUP LOCAL ---
+        // --- GESTIÓN DE BACKUPS PROGRAMADOS ---
 
-        const processCSV = (file) => {
-            const reader = new FileReader();
-            reader.onload = (e) => {
-                const text = e.target.result;
-                const rows = text.split('\n').filter(row => row.trim() !== ''); 
-                
-                let successCount = 0;
-                let errorCount = 0;
-                let newProducts = [];
-                const baseTimestamp = Date.now();
+        const loadBackupLog = () => {
+            const storedLog = localStorage.getItem(BACKUP_LOG_KEY);
+            backupLog = storedLog ? JSON.parse(storedLog) : [];
+            renderBackupList();
+        };
 
-                statusDiv.innerHTML = `<p class="text-blue-600 font-bold">Procesando ${rows.length} filas CSV...</p>`;
+        const saveBackupLog = () => {
+            localStorage.setItem(BACKUP_LOG_KEY, JSON.stringify(backupLog));
+            renderBackupList();
+        };
 
-                for (let i = 0; i < rows.length; i++) {
-                    const row = rows[i];
-                    const [productName, priceString] = row.split(',').map(item => item.trim());
-                    
-                    const price = parseFloat(priceString);
+        const renderBackupList = () => {
+            backupList.innerHTML = '';
+            if (backupLog.length === 0) {
+                backupList.innerHTML = '<li class="text-xs text-gray-500 text-center py-1">No hay backups.</li>';
+                return;
+            }
 
-                    if (productName && !isNaN(price)) {
-                        newProducts.push({
-                            id: crypto.randomUUID(),
-                            productName: productName.charAt(0).toUpperCase() + productName.slice(1), 
-                            price: price,
-                            timestamp: baseTimestamp + i 
-                        });
-                        successCount++;
-                    } else {
-                        errorCount++;
+            // Ordenar por fecha descendente
+            backupLog.sort((a, b) => new Date(b.date) - new Date(a.date));
+
+            backupLog.forEach(log => {
+                const li = document.createElement('li');
+                li.className = 'text-xs text-gray-800 flex justify-between items-center hover:bg-gray-100 p-1 rounded-sm cursor-pointer';
+                li.innerHTML = `
+                    <span>${new Date(log.date).toLocaleString()}</span>
+                    <button data-backup-id="${log.id}" class="text-red-500 hover:text-red-700 ml-2">X</button>
+                `;
+                li.querySelector('button').addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    if (window.confirm('¿Deseas eliminar este registro de backup?')) {
+                        backupLog = backupLog.filter(b => b.id !== log.id);
+                        saveBackupLog();
                     }
-                }
-                
-                const updatedProducts = [...newProducts, ...currentProductsData];
-                saveProducts(updatedProducts);
-                renderProductsTable();
+                });
+                // Funcionalidad extra: descargar backup
+                li.addEventListener('click', () => {
+                    downloadBackupData(log.data, new Date(log.date));
+                });
 
-                statusDiv.innerHTML = `<p class="text-green-600 font-bold">✅ Carga masiva completada. Éxito: ${successCount}, Errores: ${errorCount}.</p>`;
-            };
-            reader.readAsText(file);
+                backupList.appendChild(li);
+            });
         };
         
-        csvFileInput.addEventListener('change', (e) => {
-            const file = e.target.files[0];
-            if (file) {
-                processCSV(file);
-            }
-        });
-
-        const performBackup = () => {
-             statusDiv.innerHTML = '<p class="text-yellow-600 font-bold">⌛ Creando copia de seguridad...</p>';
-             try {
-                // Usamos currentProductsData, que ya está cargada y ordenada
-                const data = currentProductsData.map(p => ({
-                    productName: p.productName,
-                    price: parseFloat(p.price).toFixed(2)
-                }));
-
-                // Formato simple de dos columnas como CSV
+        const downloadBackupData = (data, date) => {
+            statusDiv.innerHTML = '<p class="text-yellow-600 font-bold">⌛ Creando copia de seguridad...</p>';
+            try {
+                // Reconstruir CSV a partir del array de objetos
                 const csvContent = "Producto,Costo\n" + data.map(e => `${e.productName},${e.price}`).join("\n");
 
                 const blob = new Blob([csvContent], { type: 'text/csv' });
@@ -934,7 +982,7 @@
                 
                 const a = document.createElement('a');
                 a.href = url;
-                a.download = `backup_inventario_${new Date().toISOString().slice(0, 10)}.csv`;
+                a.download = `backup_inventario_${date.toISOString().slice(0, 10)}.csv`;
                 document.body.appendChild(a);
                 a.click();
                 document.body.removeChild(a);
@@ -950,24 +998,74 @@
             }
         };
 
-        backupButton.addEventListener('click', performBackup);
+        const executeManualBackup = () => {
+            if (currentProductsData.length === 0) {
+                statusDiv.innerHTML = '<p class="text-yellow-600 font-bold">⚠️ No hay datos para respaldar.</p>';
+                return;
+            }
 
-        // --- MANEJADORES DE MENÚ DE ENGRANE ---
-        settingsButton.addEventListener('click', (e) => {
-            e.stopPropagation(); 
-            settingsMenu.classList.toggle('open');
-        });
+            const now = new Date();
+            
+            const backupData = currentProductsData.map(p => ({
+                productName: p.productName,
+                price: parseFloat(p.price).toFixed(2)
+            }));
+            
+            backupLog.push({
+                id: crypto.randomUUID(),
+                date: now.toISOString(),
+                data: backupData // Guardamos los datos reales para el download
+            });
+            saveBackupLog();
+            downloadBackupData(backupData, now); // Descargar inmediatamente
+        };
+        
+        const checkScheduledBackup = () => {
+            const interval = backupIntervalSelect.value;
+            if (interval === 'manual') return;
 
-        document.addEventListener('click', (e) => {
-            if (settingsMenu.classList.contains('open') && !settingsMenu.contains(e.target) && e.target !== settingsButton) {
-                recognition.stop(); 
-                settingsMenu.classList.remove('open');
+            // Lógica para determinar si ha pasado el intervalo desde el último backup
+            const lastBackup = backupLog.length > 0 ? new Date(backupLog[0].date) : new Date(0);
+            const now = new Date();
+            let milliseconds = 0;
+
+            switch (interval) {
+                case 'daily': milliseconds = 24 * 60 * 60 * 1000; break;
+                case '3days': milliseconds = 3 * 24 * 60 * 60 * 1000; break;
+                case '5days': milliseconds = 5 * 24 * 60 * 60 * 1000; break;
+                case 'monthly': milliseconds = 30 * 24 * 60 * 60 * 1000; break;
+            }
+
+            if (now.getTime() - lastBackup.getTime() >= milliseconds) {
+                executeManualBackup();
+                statusDiv.innerHTML = `<p class="text-green-600 font-bold">✅ Backup programado ejecutado.</p>`;
+            }
+        };
+
+        // Escucha cambios en el selector de intervalo (guarda la configuración)
+        backupIntervalSelect.addEventListener('change', () => {
+            // Guardar la opción seleccionada en settings (opcional, pero buena práctica)
+            currentSettings.backupInterval = backupIntervalSelect.value;
+            saveSettings();
+            
+            // Re-establecer el cronómetro (si es necesario)
+            if (backupTimer) clearInterval(backupTimer);
+
+            if (backupIntervalSelect.value !== 'manual') {
+                backupTimer = setInterval(checkScheduledBackup, 60 * 60 * 1000); // Revisar cada hora
+                statusDiv.innerHTML = `<p class="text-blue-600 font-bold">Backup programado: ${backupIntervalSelect.options[backupIntervalSelect.selectedIndex].text}.</p>`;
             }
         });
 
+        // Evento del botón de Backup Manual
+        backupButton.addEventListener('click', executeManualBackup);
+
+
         // --- MANEJADORES DE RECONOCIMIENTO DE VOZ ---
+        // (Lógica de voz sin cambios, utiliza la función performSearch ya modificada)
 
         const updateButtonStates = (isListening, mode) => {
+            // ... (Lógica de updateButtonStates sin cambios) ...
             isRecognizing = isListening;
             if (mode === 'add') {
                 startAddButtonText.textContent = isListening ? 'ESCUCHANDO...' : 'Agregar productos por voz';
@@ -1058,10 +1156,10 @@
         // Inicializar la aplicación
         document.addEventListener('DOMContentLoaded', () => {
              loadSettings();
+             loadBackupLog(); // Cargar historial de backups
              renderProductsTable();
         });
     </script>
 
 </body>
 </html>
-
