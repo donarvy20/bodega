@@ -264,6 +264,12 @@
                     <svg class="w-5 h-5 mr-2 text-yellow-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
                     Generar Copia de Seguridad
                 </button>
+                <button id="restoreBackupButton" class="w-full flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-green-50 hover:text-green-700 transition duration-150 rounded-md mt-2">
+  <svg class="w-5 h-5 mr-2 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
+  </svg>
+  Restaurar desde Backup (CSV)
+</button>
             </div>
         </div>
     </div>
@@ -367,6 +373,7 @@
 
     <script>
         // Referencias del DOM
+        const restoreBackupButton = document.getElementById('restoreBackupButton');
         const productNameInput = document.getElementById('productNameInput');
         const priceInput = document.getElementById('priceInput');
         const docIdInput = document.getElementById('docIdInput');
@@ -1234,6 +1241,93 @@
                 settingsMenu.classList.remove('open');
             }
         });
+
+
+// --- FUNCIÓN PARA RESTAURAR DATOS DESDE UN BACKUP CSV ---
+const restoreFromBackup = (csvText) => {
+  const lines = csvText.trim().split('\n');
+  if (lines.length < 2) {
+    statusDiv.innerHTML = '<p class="text-red-600 font-bold">❌ El archivo CSV está vacío o no es válido.</p>';
+    return;
+  }
+
+  // Saltar encabezado
+  const products = [];
+  for (let i = 1; i < lines.length; i++) {
+    const line = lines[i].trim();
+    if (!line) continue;
+
+    // Soportar comillas y campos con comas dentro (básico)
+    const match = line.match(/(".*?"|[^,]*),(.*)/);
+    if (!match) continue;
+
+    let productName = match[1].replace(/^"(.*)"$/, '$1').trim();
+    let priceStr = match[2].trim();
+
+    const price = parseFloat(priceStr);
+    if (isNaN(price) || !productName) continue;
+
+    products.push({
+      id: crypto.randomUUID(),
+      productName: productName,
+      price: price,
+      timestamp: Date.now()
+    });
+  }
+
+  if (products.length === 0) {
+    statusDiv.innerHTML = '<p class="text-red-600 font-bold">❌ No se pudieron leer productos válidos del CSV.</p>';
+    return;
+  }
+
+  // Confirmar reemplazo total
+  if (!window.confirm(`⚠️ Se reemplazará todo el inventario actual (${currentProductsData.length} artículos) por ${products.length} nuevos. ¿Continuar?`)) {
+    return;
+  }
+
+  // Guardar y recargar
+  saveProducts(products);
+  renderProductsTable();
+  statusDiv.innerHTML = `<p class="text-green-600 font-bold">✅ Inventario restaurado desde backup: ${products.length} artículos cargados.</p>`;
+  settingsMenu.classList.remove('open');
+};
+
+// Listener para el botón de restaurar
+restoreBackupButton.addEventListener('click', () => {
+  const fileInput = document.createElement('input');
+  fileInput.type = 'file';
+  fileInput.accept = '.csv';
+  fileInput.onchange = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const csvText = event.target.result;
+      restoreFromBackup(csvText);
+    };
+    reader.onerror = () => {
+      statusDiv.innerHTML = '<p class="text-red-600 font-bold">❌ Error al leer el archivo.</p>';
+    };
+    reader.readAsText(file, 'utf-8');
+  };
+  fileInput.click();
+});
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
         
         // Inicializar la aplicación
         document.addEventListener('DOMContentLoaded', () => {
@@ -1245,5 +1339,6 @@
 
 </body>
 </html>
+
 
 
